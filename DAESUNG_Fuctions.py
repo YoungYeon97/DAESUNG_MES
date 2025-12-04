@@ -205,6 +205,11 @@ class DaesungFunctions(QDialog):
                 #self.tableWidget.hideColumn(8)
                 self.stackedWidget.setCurrentWidget(self.s_page)
                 self.ORDER = 'MJAKUP.REG_DATE DESC, MJAKUP.JAKUP_APPR_TIME DESC' #SQL 정렬 구문
+            elif WC_CODE == '19':
+                self.stackedWidget.setCurrentWidget(self.s_page)
+                self.flag_radio.hide()
+                self.tableWidget.hideColumn(3)
+                self.reload_btn.hide()
             else:
                 self.stackedWidget.setCurrentWidget(self.m_page)
                 self.flag_radio.hide()
@@ -252,9 +257,13 @@ class DaesungFunctions(QDialog):
                 else:
                     for h in [8, 10, 11]: self.tableWidget.hideColumn(h)
                     if PROC_CODE != '0101':
-                        self.print_frame.hide()
-                        self.label_combo.hide()
-                        self.tableWidget.hideColumn(3)
+                        if WC_CODE == '19':
+                            self.label_combo.hide()
+                            self.tableWidget.hideColumn(3)
+                        else:
+                            self.print_frame.hide()
+                            self.label_combo.hide()
+                            self.tableWidget.hideColumn(3)
             self.tableWidget.setHorizontalHeaderLabels(self.t_text)
     
     def setAutoStyle(self, date, PROC_CODE, PROC_NAME):

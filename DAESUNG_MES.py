@@ -1406,7 +1406,7 @@ class MesDetailWindow(QDialog):
                             if self.label_combo.currentIndex() == 0: self.fileName, mode_edit, hole_flag, PROC = ss_label, self.set_win.printer_mode_check, 0, SS_PROC
                             elif self.label_combo.currentIndex() == 1: self.fileName, mode_edit, hole_flag, PROC = cs_label, self.set_win.printer2_mode_check, 0, CS_PROC
                             elif self.label_combo.currentIndex() == 2: self.fileName, mode_edit, hole_flag, PROC = zs_label, self.set_win.printer3_mode_check, 1, ZS_PROC
-                    elif WC_CODE == '19': self.fileName, mode_edit, hole_flag, PROC = c_label = if_label, self.set_win.printer_mode_check, 0, PROC_CODE
+                    elif WC_CODE == '19': self.fileName, mode_edit, hole_flag, PROC = if_label, self.set_win.printer_mode_check, 0, PROC_CODE
                     else:
                         if PROC_CODE == '0101' and self.label_combo.currentIndex() == 0: self.fileName, mode_edit, hole_flag, PROC = s_label, self.set_win.printer_mode_check, 0, S_PROC
                         elif PROC_CODE == '0101' and self.label_combo.currentIndex() == 2: self.fileName, mode_edit, hole_flag, PROC = z300_label, self.set_win.printer_mode_check, 1, Z_PROC
