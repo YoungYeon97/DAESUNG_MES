@@ -1394,9 +1394,9 @@ class MesDetailWindow(QDialog):
                 if checkbox.isChecked() == True: checkArray.append(count)
             if checkArray != []:
                 try:
-                    # self.mysocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-                    # self.mysocket.settimeout(0.5)
-                    # self.mysocket.connect((self.ip, self.port))
+                    self.mysocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+                    self.mysocket.settimeout(0.5)
+                    self.mysocket.connect((self.ip, self.port))
                     self.print_status.setStyleSheet("background-color: #55cba7;") #green
                     try: self.th_rowCount.terminate()
                     except: pass
@@ -1474,7 +1474,6 @@ class MesDetailWindow(QDialog):
                                             elif i == 'QTY_NO_ALL': print_data = QTY_NO
                                             elif i == 'QTY': print_data = '{0}/{1}'.format(P_rows[0]['SEQ_QTY'], int(print_data))
                                         textData = textData.replace("{%s}"%i, str(print_data))
-                                    print(textData)
                                     self.mysocket.send(textData.encode())
                                     l_count += 1
                                     try:
