@@ -1388,14 +1388,15 @@ class MesDetailWindow(QDialog):
     #라벨 발행
     def printLabel(self):
         checkArray, l_count = [], 1
+        self.printer_flag = 'success'
         if self.printer_flag == "success":
             for count, checkbox in enumerate(self.checkBoxList):
                 if checkbox.isChecked() == True: checkArray.append(count)
             if checkArray != []:
                 try:
-                    self.mysocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-                    self.mysocket.settimeout(0.5)
-                    self.mysocket.connect((self.ip, self.port))
+                    # self.mysocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+                    # self.mysocket.settimeout(0.5)
+                    # self.mysocket.connect((self.ip, self.port))
                     self.print_status.setStyleSheet("background-color: #55cba7;") #green
                     try: self.th_rowCount.terminate()
                     except: pass
@@ -1473,6 +1474,7 @@ class MesDetailWindow(QDialog):
                                             elif i == 'QTY_NO_ALL': print_data = QTY_NO
                                             elif i == 'QTY': print_data = '{0}/{1}'.format(P_rows[0]['SEQ_QTY'], int(print_data))
                                         textData = textData.replace("{%s}"%i, str(print_data))
+                                    print(textData)
                                     self.mysocket.send(textData.encode())
                                     l_count += 1
                                     try:
@@ -2394,7 +2396,7 @@ class MesEdgeWindow(QDialog):
         except: pass
         
         self.sensor_btn.clicked.connect(lambda: self.clickedSensor('0100'))
-        self.barcode_input.returnPressed.connect(self.PressedEnterKey) #QR코드 입력
+        # self.barcode_input.returnPressed.connect(self.PressedEnterKey) #QR코드 입력
         
         self.state_group.buttonClicked[int].connect(self.item1Cancel) #엣지1 취소
         self.state_group2.buttonClicked[int].connect(self.item2Cancel) #엣지2 취소
@@ -2488,18 +2490,22 @@ class MesEdgeWindow(QDialog):
                 logging.debug("connectSensor : 센서 연결 실패")
                 self.sensor_btn.setStyleSheet("background-color: #fd97a5;") #red
                 self.light_btn.setStyleSheet("background-color: #fd97a5;") #red
-                self.connectScanner()
-                # try:
-                #     self.sensor_con_th = SerialThread(sensor_port, sensor_rate)
-                #     self.sensor_con_th.sig_data.connect(self.SensorConSlot)
-                #     self.sensor_con_th.start()
-                # except: logging.debug("connectSensor : sensor_con_th 실패")
+                self.barcode_input.hide()
+                self.input_btn.hide()
+                # self.connectScanner()
+                try:
+                    self.sensor_con_th = SerialThread(sensor_port, sensor_rate)
+                    self.sensor_con_th.sig_data.connect(self.SensorConSlot)
+                    self.sensor_con_th.start()
+                except: logging.debug("connectSensor : sensor_con_th 실패")
         else:
             self.sensor_flag = "unable"
             logging.debug("connectSensor : 센서 비활성")
             self.sensor_btn.setStyleSheet("background-color: #CDCDCD;") #gray
             self.light_btn.setStyleSheet("background-color: #CDCDCD;") #gray
-            self.connectScanner()
+            self.barcode_input.hide()
+            self.input_btn.hide()
+            # self.connectScanner()
     
     def connectScanner(self):
         global scanner_socket
