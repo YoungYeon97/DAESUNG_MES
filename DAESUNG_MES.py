@@ -1303,13 +1303,11 @@ class MesDetailWindow(QDialog):
         self.checkBoxList = []
         #----------------------------------------------------------------------------
         D_rows = DaesungQuery.selectDetailList(self, self.REG_NO, '%', '%', self.s_date, PROC_CODE, self.ORDER)
-        print("D_rows = ", D_rows)
         #----------------------------------------------------------------------------
         if D_rows == 'failed': self.connectDBThread()
         elif D_rows == ():
             logging.debug("DBload : 작업지시서 취소됨")
             MessageWindow(self, "해당 작업지시서가 취소되었습니다.").showModal()
-            print("TEST")
             self.back()
         else:
             try:
@@ -2685,7 +2683,6 @@ class MesEdgeWindow(QDialog):
                                     elif i == 'CAL_HOLE_VALUE': print_data = '(%d)'%int(QR_rows[0]['CAL_HOLE_VALUE'])
                                     elif i == 'QTY': print_data = '{0}/{1}'.format(QR_rows[0]['SEQ_QTY'], int(print_data))
                                 textData = textData.replace("{%s}"%i, str(print_data))
-                            print(textData)
                             #self.print_socket.send(textData.encode())
                     except: logging.debug("printData : selectCNClabel 실패")
                     self.print_socket.close()
@@ -4399,8 +4396,6 @@ class MesBogangWindow(QDialog):
     def __init__(self, date):
         super(MesBogangWindow, self).__init__()
         loadUi("ui\DAESUNG_MES_BG.ui", self)
-
-        print("BOGANG")
         
         DaesungFunctions.setFrameStyle(self, date, PROC_CODE, PROC_NAME) #기본 셋팅
         
