@@ -1303,11 +1303,13 @@ class MesDetailWindow(QDialog):
         self.checkBoxList = []
         #----------------------------------------------------------------------------
         D_rows = DaesungQuery.selectDetailList(self, self.REG_NO, '%', '%', self.s_date, PROC_CODE, self.ORDER)
+        print("D_rows = ", D_rows)
         #----------------------------------------------------------------------------
         if D_rows == 'failed': self.connectDBThread()
         elif D_rows == ():
             logging.debug("DBload : 작업지시서 취소됨")
             MessageWindow(self, "해당 작업지시서가 취소되었습니다.").showModal()
+            print("TEST")
             self.back()
         else:
             try:
@@ -1432,7 +1434,7 @@ class MesDetailWindow(QDialog):
                             if P_rows == 'failed': self.connectDBThread()
                             elif P_rows != []:
                                 try:
-                                    for i in ['REG_NO', 'LOT_NUMB', 'REG_SEQ', 'REG_DATE', 'HOPE_DATE', 'LENX', 'WIDX', 'TIKX', 'LW', 'W', 'L', 'CAL_HOLE_VALUE', 'ITEM_MA_NAME', 'ITEM_NAME', 'SPCL_NAME', 'EDGE_NAME', 'GLAS_NAME', 'CONN_CPROC_NAME', 'QTY_NO_ALL', 'QTY', 'BUYER_NAME', 'TRANS_FLAG_NAME', 'BIGO', 'CPROC_BIGO', 'LABEL_BIGO', 'BAR_CODE', 'FSET_FLAG_NAME', 'CONN_CPROC_NAME_BIGO']:
+                                    for i in ['REG_NO', 'LOT_NUMB', 'REG_SEQ', 'REG_DATE', 'HOPE_DATE', 'LENX', 'WIDX', 'TIKX', 'LW', 'W', 'L', 'CAL_HOLE_VALUE', 'ITEM_MA_NAME', 'ITEM_NAME', 'SPCL_NAME', 'EDGE_NAME', 'GLAS_NAME', 'CONN_CPROC_NAME', 'QTY_NO_ALL', 'QTY', 'BUYER_NAME', 'TRANS_FLAG_NAME', 'BIGO', 'CPROC_BIGO', 'LABEL_BIGO', 'BAR_CODE', 'FSET_FLAG_NAME', 'CONN_CPROC_NAME_BIGO', 'KYU']:
                                         if i == 'CONN_CPROC_NAME_BIGO':
                                             #----------------------------------------------------------------------------
                                             CONN_CPROC_NAME_BIGO = DaesungQuery.selectConnBigo(self, self.REG_NO, REG_SEQ)
@@ -2392,8 +2394,8 @@ class MesEdgeWindow(QDialog):
         except: pass
         
         self.sensor_btn.clicked.connect(lambda: self.clickedSensor('0100'))
+        self.barcode_input.returnPressed.connect(self.PressedEnterKey) #QR코드 입력
         
-        self.test_btn.clicked.connect(self.testMode)
         self.state_group.buttonClicked[int].connect(self.item1Cancel) #엣지1 취소
         self.state_group2.buttonClicked[int].connect(self.item2Cancel) #엣지2 취소
 
@@ -2479,21 +2481,58 @@ class MesEdgeWindow(QDialog):
                 logging.debug("connectSensor : 센서 연결 성공")
                 self.sensor_btn.setStyleSheet("background-color: #55cba7;") #green
                 self.light_btn.setStyleSheet("background-color: #55cba7;") #green
+                self.barcode_input.hide()
+                self.input_btn.hide()
             except:
                 self.sensor_flag = "failed"
                 logging.debug("connectSensor : 센서 연결 실패")
                 self.sensor_btn.setStyleSheet("background-color: #fd97a5;") #red
                 self.light_btn.setStyleSheet("background-color: #fd97a5;") #red
-                try:
-                    self.sensor_con_th = SerialThread(sensor_port, sensor_rate)
-                    self.sensor_con_th.sig_data.connect(self.SensorConSlot)
-                    self.sensor_con_th.start()
-                except: logging.debug("connectSensor : sensor_con_th 실패")
+                self.connectScanner()
+                # try:
+                #     self.sensor_con_th = SerialThread(sensor_port, sensor_rate)
+                #     self.sensor_con_th.sig_data.connect(self.SensorConSlot)
+                #     self.sensor_con_th.start()
+                # except: logging.debug("connectSensor : sensor_con_th 실패")
         else:
             self.sensor_flag = "unable"
             logging.debug("connectSensor : 센서 비활성")
             self.sensor_btn.setStyleSheet("background-color: #CDCDCD;") #gray
             self.light_btn.setStyleSheet("background-color: #CDCDCD;") #gray
+            self.connectScanner()
+    
+    def connectScanner(self):
+        global scanner_socket
+        #-------------------------------------------------------------
+        try: self.scanner_th.terminate()
+        except: pass
+        try: self.sc_con_th.terminate()
+        except: pass
+        try: scanner_socket.close()
+        except: pass
+        #-------------------------------------------------------------
+        if self.set_win.scanner_check.isChecked():
+            try:
+                self.scanner_ip = self.set_win.scanner_ip_input.text()
+                self.scanner_port = int(self.set_win.scanner_port_input.text())
+                #-------------------------------------------------------------
+                scanner_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                scanner_socket.settimeout(0.5)
+                scanner_socket.connect((self.scanner_ip, self.scanner_port))
+                logging.debug("connectScanner : 스캐너 연결 성공")
+                #-------------------------------------------------------------
+                self.scanner_th = ScannerThread()
+                self.scanner_th.sig_data.connect(self.scannerData)
+                self.scanner_th.start()
+                #-------------------------------------------------------------
+                logging.debug("connectScanner : scanner_th 성공")
+                #self.scanner_btn.setStyleSheet("background-color: #55cba7;") #green
+            except:
+                logging.debug("connectScanner : 스캐너 연결 실패")
+                #self.scanner_btn.setStyleSheet("background-color: #fd97a5;") #red
+        else:
+            logging.debug("connectScanner : 스캐너 비활성")
+            #self.scanner_btn.setStyleSheet("background-color: #CDCDCD;") #gray
     
     def connectPrinter(self):
         try: self.prt_con_th.close()
@@ -2586,23 +2625,12 @@ class MesEdgeWindow(QDialog):
                     except: logging.debug("DBload : th_rowCount 연결 실패")
             DaesungFunctions.tableWidth(self, 'EDGE', '', '')
     
-    def testMode(self):
-        c_text = self.test_btn.text()
-        if c_text == '테스트 사용':
-            self.test_btn.setText('테스트 멈춤')
-            self.test_btn.setStyleSheet('background:#fd983c;')
-        else:
-            self.test_btn.setText('테스트 사용')
-            self.test_btn.setStyleSheet('background:#5D76B8;')
-    
     #라벨 발행
     def printData(self):
         try:
-            if self.test_btn.text() == '테스트 멈춤': QR_CODE = '00120221018005900011000119200620110253'
-            else:
-                SPCL = self.tableWidget.item(self.tableWidget.rowCount() - 1, 4).text()
-                EDGE = self.tableWidget.item(self.tableWidget.rowCount() - 1, 5).text()
-                QR_CODE = self.tableWidget.item(self.tableWidget.rowCount() - 1, 7).text()
+            SPCL = self.tableWidget.item(self.tableWidget.rowCount() - 1, 4).text()
+            EDGE = self.tableWidget.item(self.tableWidget.rowCount() - 1, 5).text()
+            QR_CODE = self.tableWidget.item(self.tableWidget.rowCount() - 1, 7).text()
             try:
                 if SPCL.find('(177)') >= 0: self.ser.write('RY 3 0\r'.encode()) #엣지 없음
                 elif EDGE == '-' or EDGE == '일면': self.ser.write('RY 3 0\r'.encode()) #엣지 없음
@@ -2652,7 +2680,8 @@ class MesEdgeWindow(QDialog):
                                     elif i == 'CAL_HOLE_VALUE': print_data = '(%d)'%int(QR_rows[0]['CAL_HOLE_VALUE'])
                                     elif i == 'QTY': print_data = '{0}/{1}'.format(QR_rows[0]['SEQ_QTY'], int(print_data))
                                 textData = textData.replace("{%s}"%i, str(print_data))
-                            self.print_socket.send(textData.encode())
+                            print(textData)
+                            #self.print_socket.send(textData.encode())
                     except: logging.debug("printData : selectCNClabel 실패")
                     self.print_socket.close()
                 except:
@@ -2662,6 +2691,59 @@ class MesEdgeWindow(QDialog):
             except: logging.debug("printData : dorna 전송 실패")
         except: pass
     
+    def printDataScanner(self, QR_CODE):
+        try:
+            try:
+                self.print_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+                self.print_socket.settimeout(0.5)
+                self.print_socket.connect((self.printer_ip, self.printer_port))
+                logging.debug("printDataScanner : 프린터 연결 성공")
+                self.Print_btn.setStyleSheet("background-color: #55cba7;") #green
+                try:
+                    #----------------------------------------------------------------------------
+                    QR_rows = DaesungQuery.selectCNClabel(self, PROC_CODE, QR_CODE)
+                    #----------------------------------------------------------------------------
+                    if QR_rows == 'failed': self.connectDBThread()
+                    elif QR_rows != []:
+                        f_name = open(z_label, 'r', encoding = 'utf-8')
+                        textData = f_name.read()
+                        f_name.close()
+                        if self.set_win.printer_mode_check.isChecked() == True: textData = textData.replace("^CI28", "^CI28" + self.mode)
+                        if self.set_win.printer_po_check.isChecked() == True: textData = textData.replace("^LS0", "^LS0^POI")
+                        elif self.set_win.printer_po_check.isChecked() == False: textData = textData.replace("^LS0", "^LS0^PON")
+                        for i in ['BUYER_NAME', 'REG_NO', 'REG_SEQ', 'LOT_NUMB', 'TRANS_FLAG_NAME', 'SPCL_NAME', 'ITEM_NAME', 'LENX', 'WIDX', 'TIKX', 'LW', 'W', 'L', 'KYU', 'CAL_HOLE_VALUE', 'QTY', 'LABEL_BIGO', 'FSET_FLAG_NAME', 'CONN_CPROC_NAME_BIGO']:
+                            if i == 'CONN_CPROC_NAME_BIGO':
+                                #----------------------------------------------------------------------------
+                                CONN_CPROC_NAME_BIGO = DaesungQuery.selectConnBigo(self, QR_rows[0]['REG_NO'], QR_rows[0]['REG_SEQ'])
+                                #----------------------------------------------------------------------------
+                                print_data = CONN_CPROC_NAME_BIGO[0]['CONN_CPROC_NAME_BIGO']
+                            elif i == 'LW':
+                                if QR_rows[0]['WIDX'] == None: widx = '-'
+                                else: widx = int(QR_rows[0]['WIDX'])
+                                if QR_rows[0]['LENX'] == None: lenx = '-'
+                                else: lenx = int(QR_rows[0]['LENX'])
+                                print_data = str(widx)[:-2].zfill(2) + str(lenx)[:-2].zfill(2)
+                            elif i == 'W':
+                                if QR_rows[0]['WIDX'] == None: print_data = ''
+                                else: print_data = int(QR_rows[0]['WIDX']) - 10
+                            elif i == 'L':
+                                if QR_rows[0]['LENX'] == None: print_data = ''
+                                else: print_data = int(QR_rows[0]['LENX']) + 10
+                            else:
+                                print_data = QR_rows[0][i]
+                                if print_data == None: print_data = ""
+                                elif i == 'LENX' or i == 'WIDX' or i == 'TIKX': print_data = int(print_data)
+                                elif i == 'CAL_HOLE_VALUE': print_data = '(%d)'%int(QR_rows[0]['CAL_HOLE_VALUE'])
+                                elif i == 'QTY': print_data = '{0}/{1}'.format(QR_rows[0]['SEQ_QTY'], int(print_data))
+                            textData = textData.replace("{%s}"%i, str(print_data))
+                        self.print_socket.send(textData.encode())
+                except: logging.debug("printDataScanner : selectCNClabel 실패")
+                self.print_socket.close()
+            except:
+                logging.debug("printDataScanner : 프린터 연결 실패")
+                self.connectPrinter() #바코드 프린터 연결
+        except Exception as e: logging.debug("printDataScanner : failed(%s)"%e)
+
     #엣지1 전표 취소
     def item1Cancel(self, index):
         SEQ = self.tableWidget.item(index, 2).text()
@@ -2819,6 +2901,61 @@ class MesEdgeWindow(QDialog):
             if data[2:3] == '1' and self.printer_flag == "success": self.printData()
         elif data == 'failed': self.connectSensor()
     
+    def PressedEnterKey(self):
+        BAR_CODE = self.barcode_input.text().replace('\x02','').replace(" ", '') #공백 제거
+        self.scannerData(BAR_CODE)
+    
+    @pyqtSlot(str)
+    def scannerData(self, data):
+        try:
+            #엣지1
+            #----------------------------------------------------------------------------
+            L_rows = DaesungQuery.selectJakupData(self, LINE_FLAG, data)
+            #----------------------------------------------------------------------------
+            if L_rows == ():
+                #----------------------------------------------------------------------------
+                SEQ = DaesungQuery.selectEdgeMaxSeq(self, LINE_FLAG, self.s_date[:6])
+                #----------------------------------------------------------------------------
+                if SEQ['SEQ'] == None: SEQ = 1000
+                else: SEQ = int(SEQ['SEQ']) + 1
+                #----------------------------------------------------------------------------
+                DaesungQuery.insertEdgeSeq(self, LINE_FLAG, self.s_date[:6], data, SEQ, '2')
+                #----------------------------------------------------------------------------
+            else:
+                #----------------------------------------------------------------------------
+                SEQ = DaesungQuery.selectEdgeMaxSeq(self, LINE_FLAG, self.s_date[:6])
+                #----------------------------------------------------------------------------
+                if SEQ['SEQ'] == None: SEQ = 1000
+                else: SEQ = int(SEQ['SEQ']) + 1
+                #----------------------------------------------------------------------------
+                DaesungQuery.updateEdgeSeqScanner(self, "PUT_FLAG = '2'", SEQ, self.s_date[:6], L_rows['MES_FLAG'], L_rows['BAR_CODE'])
+                #----------------------------------------------------------------------------
+            self.DBload()
+            
+            # if self.printer_flag == "success": self.printDataScanner(data) #라벨발행
+
+            #엣지2
+            #----------------------------------------------------------------------------
+            # L_rows = DaesungQuery.selectJakupData(self, LINE_FLAG, data)
+            # #----------------------------------------------------------------------------
+            # if L_rows == ():
+            #     #----------------------------------------------------------------------------
+            #     SEQ = DaesungQuery.selectEdgeMaxSeq(self, LINE_FLAG, self.s_date[:6])
+            #     #----------------------------------------------------------------------------
+            #     if SEQ['SEQ'] == None: SEQ = 1000
+            #     else: SEQ = int(SEQ['SEQ']) + 1
+            #     #----------------------------------------------------------------------------
+            #     DaesungQuery.insertEdgeSeq(self, LINE_FLAG, self.s_date[:6], data, SEQ, '4')
+            #     #----------------------------------------------------------------------------
+            # else:
+            #     #----------------------------------------------------------------------------
+            #     DaesungQuery.updateEdgeSeq(self, "PUT_FLAG = '4'", self.s_date[:6], L_rows['MES_FLAG'], L_rows['BAR_CODE'], L_rows['SEQ'])
+            #     #----------------------------------------------------------------------------
+            # self.DBload()
+
+            self.format_th.start()
+        except Exception as e: logging.debug("scannerData : failed(%s)"%e)
+    
     #---------------------------------------------------------------------------------------------------
     @pyqtSlot(int)
     def rowCountSlot(self, data):
@@ -2842,7 +2979,9 @@ class MesEdgeWindow(QDialog):
     @pyqtSlot(int)
     def FormatSlot(self, num):
         try:
-            if num == 1: self.result_data.setText('')
+            if num == 1:
+                self.result_data.setText('')
+                self.barcode_input.setText('')
             if num == 3 and self.sensor_flag == 'success':
                 try:
                     self.ser.write('RY 1 0\r'.encode()) #green light

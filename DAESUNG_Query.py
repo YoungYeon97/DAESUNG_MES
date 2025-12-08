@@ -189,7 +189,6 @@ class DaesungQuery(QDialog):
                 MJAKUP.MES_PRT_FLAG,
                 MJAKUP.JAKUP_APPR_TIME
             ORDER BY {ORDER}""".format(COMP_CODE = COMP_CODE, PROC_CODE = PROC_CODE, s_date = s_date, PRT_FLAG = PRT_FLAG, JAKUP_APPR_FLAG = JAKUP_APPR_FLAG, ORDER = ORDER, W_DATA = W_DATA)
-            print(sql_item)
             cursor_item.execute(sql_item)
             S_rows = cursor_item.fetchall()
         except: S_rows = 'failed'
@@ -1247,12 +1246,12 @@ class DaesungQuery(QDialog):
         cursor_item.execute('RESET QUERY CACHE;')
         sql_item = """
         SELECT *
-FROM FD_JAKUP_SEQ_FRAME
-WHERE MES_FLAG LIKE '1'
-  AND REG_DATE = '20250804'
-  AND REG_TIME < 144643
-ORDER BY SEQ DESC
-limit 10;""".format(MES_FLAG = MES_FLAG, REG_DATE = REG_DATE, REG_TIME = REG_TIME)
+        FROM FD_JAKUP_SEQ_FRAME
+        WHERE MES_FLAG LIKE '{MES_FLAG}'
+          AND REG_DATE = '{REG_DATE}'
+          AND REG_TIME > {REG_TIME}
+        ORDER BY SEQ DESC
+        LIMIT 10;""".format(MES_FLAG = MES_FLAG, REG_DATE = REG_DATE, REG_TIME = REG_TIME)
         cursor_item.execute(sql_item)
         L_rows = cursor_item.fetchall()
     
@@ -1649,6 +1648,23 @@ limit 10;""".format(MES_FLAG = MES_FLAG, REG_DATE = REG_DATE, REG_TIME = REG_TIM
         except:
             db.rollback()
             logging.debug('updateEdgeSeq : 실패')
+    
+    #FD_JAKUP_SEQ 테이블 UPDATE
+    def updateEdgeSeqScanner(self, PUT_FLAG, SEQ, s_date, FLAG, BAR_CODE):
+        logging.debug('updateEdgeSeqScanner : {0}, {1}, {2}, {3}, {4}'.format(PUT_FLAG, SEQ, s_date, FLAG, BAR_CODE))
+        sql_item ="""
+        UPDATE FD_JAKUP_SEQ
+        SET {PUT_FLAG}, SEQ = '{SEQ}'
+        WHERE MES_FLAG = '{FLAG}'
+          AND REG_DATE = '{s_date}00'
+          AND BAR_CODE = '{BAR_CODE}'""".format(PUT_FLAG = PUT_FLAG, SEQ = SEQ, s_date = s_date, FLAG = FLAG, BAR_CODE = BAR_CODE)
+        try:
+            cursor_item.execute(sql_item.encode('utf-8'))
+            db.commit()
+            logging.debug('updateEdgeSeqScanner : 성공')
+        except:
+            db.rollback()
+            logging.debug('updateEdgeSeqScanner : 실패')
     
     #################################################################################################################################
     #작업지시바코드 PROCEDURE

@@ -207,6 +207,8 @@ class DaesungFunctions(QDialog):
                 self.ORDER = 'MJAKUP.REG_DATE DESC, MJAKUP.JAKUP_APPR_TIME DESC' #SQL 정렬 구문
             elif WC_CODE == '19':
                 self.stackedWidget.setCurrentWidget(self.s_page)
+                self.print_btn.hide()
+                self.print_status.hide()
                 self.flag_radio.hide()
                 self.tableWidget.hideColumn(3)
                 self.reload_btn.hide()
@@ -259,7 +261,7 @@ class DaesungFunctions(QDialog):
                     if PROC_CODE != '0101':
                         if WC_CODE == '19':
                             self.label_combo.hide()
-                            self.tableWidget.hideColumn(3)
+                            # self.tableWidget.hideColumn(3)
                         else:
                             self.print_frame.hide()
                             self.label_combo.hide()
