@@ -30,7 +30,6 @@ calStyle = """QCalendarWidget QToolButton{height: 40px; color: white; font-size:
               QCalendarWidget QWidget#qt_calendar_navigationbar{background-color: #3D5A9D; font: bold 28px;}"""
 
 class DaesungFunctions(QDialog):
-    
     def replaceDate(self):
         self.reload_num = 0 #DB실시간 로드 FLAG
         self.s_date = self.date_btn.text().replace(' ', '').replace('-', '') #조회일자
@@ -43,7 +42,7 @@ class DaesungFunctions(QDialog):
         except: pass
         try: self.th_rowCount.terminate()
         except: pass
-        self.DBload() #DB로드
+        # self.DBload() #DB로드
             
     def calendar(self):
         if self.calendar_flag == False:
