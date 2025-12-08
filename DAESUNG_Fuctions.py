@@ -42,8 +42,8 @@ class DaesungFunctions(QDialog):
         except: pass
         try: self.th_rowCount.terminate()
         except: pass
-        # self.DBload() #DB로드
-            
+        self.DBload() #DB로드
+
     def calendar(self):
         if self.calendar_flag == False:
             DaesungFunctions.showCalendar(self)

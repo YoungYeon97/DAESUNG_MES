@@ -4530,7 +4530,16 @@ class MesBogangWindow(QDialog):
         if len(a[2]) == 1: a[2] = "0" + a[2]
         self.date_btn.setText("%s-%s-%s "%(a[3],a[1],a[2])) # 월, 일자가 1자 일때
         self.calendar_flag = False
-        DaesungFunctions.replaceDate(self) #DB로드
+        self.replaceDate()
+
+    def replaceDate(self):
+        self.reload_num = 0 #DB실시간 로드 FLAG
+        self.s_date = self.date_btn.text().replace(' ', '').replace('-', '') #조회일자
+        self.s_time = time.strftime('%H%M%S') #현재시간
+        self.db_seq, self.db_array = ['', '', '', '', '', '', '', '', '', ''], ['', '', '', '', '', '', '', '', '', '']
+        try: self.th_rowCount.terminate()
+        except: pass
+        self.DBload(0) #DB로드
     
     def mousePressEvent(self, event):
         if event.buttons() == Qt.LeftButton and self.calendar_flag == True:
