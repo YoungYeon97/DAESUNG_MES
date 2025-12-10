@@ -1035,7 +1035,8 @@ class MesLotWindow(QDialog):
             LOT_NO = self.tableWidget.item(index.row(), 5).text()
             REG_NO = self.tableWidget.item(index.row(), 9).text()
             s_date = self.date_btn.text()
-            print_window = MesDetailWindow(JAKUP_FLAG, LOT_NO, REG_NO, s_date) #DETAIL 화면 연결
+            if WC_CODE == '19': print_window = MesInteriorDetailWindow(JAKUP_FLAG, LOT_NO, REG_NO, s_date) #인테리어필름 DETAIL 화면 연결
+            else: print_window = MesDetailWindow(JAKUP_FLAG, LOT_NO, REG_NO, s_date) #DETAIL 화면 연결
             try: self.th_rowCount.terminate()
             except: pass
             widget.addWidget(print_window)
@@ -1359,7 +1360,9 @@ class MesDetailWindow(QDialog):
                             if print_data == None: print_data = ''
                             elif j == 'HOPE_DATE': print_data = "{0}/{1}".format(print_data[4:6], print_data[6:8])
                             elif j == 'ABS_LENX' or j == 'ABS_WIDX': print_data = int(print_data)
-                            elif j == 'QTY_NO_ALL' and PROC_CODE == '0103': print_data = int(D_rows[i]['ABS_QTY'])
+                            elif j == 'QTY_NO_ALL' and PROC_CODE == '0103': 
+                                print_data = int(D_rows[i]['ABS_QTY'])
+                                print("print_data = ", print_data)
                             elif j == 'QTY': print_data = int(print_data)
                             item_data = QTableWidgetItem(str(print_data))
                             if j == 'REG_SEQ' or j == 'HOPE_DATE': item_data.setTextAlignment(Qt.AlignVCenter | Qt.AlignCenter)
@@ -1386,7 +1389,6 @@ class MesDetailWindow(QDialog):
     #라벨 발행
     def printLabel(self):
         checkArray, l_count = [], 1
-        self.printer_flag = 'success'
         if self.printer_flag == "success":
             for count, checkbox in enumerate(self.checkBoxList):
                 if checkbox.isChecked() == True: checkArray.append(count)
@@ -1552,6 +1554,338 @@ class MesDetailWindow(QDialog):
         try:
             SetWindow().showModal()
             self.setPrintIp()
+        except: logging.debug("setData : 상세페이지 연결 실패")
+    
+    def logWindow(self):
+        try:
+            try: self.th_rowCount.terminate()
+            except: pass
+            MesLogWindow(TodayData).showModal()
+            self.th_rowCount.start()
+        except: logging.debug("logWindow : 로그 화면 연결 실패")
+    
+    #실시간 DB연결
+    def connectDBThread(self):
+        self.DB_btn.setStyleSheet("background-color: #fd97a5;") #red
+        if self.DB_flag == 0:
+            self.DB_flag = 1
+            logging.debug("DBload : DB로드 실패")
+            MessageWindow(self, "DB연결 실패").showModal()
+            #----------------------------------------------------------------------------
+            self.DB_th = ConnectDBThread()
+            self.DB_th.sig_data.connect(self.DbThreadSlot)
+            self.DB_th.start()
+    
+    @pyqtSlot(int)
+    def DbThreadSlot(self, con):
+        if con == 1:
+            self.DB_th.terminate()
+            self.DB_flag = 0
+            #----------------------------------------------------------------------------
+            result = DaesungQuery.connectDB(self, host, port, user, name)
+            #----------------------------------------------------------------------------
+            if result == 'success':
+                self.connectPrint() #바코드 프린터 연결
+                self.DBload() #DB로드
+    
+    def back(self):
+        try: self.light_th.terminate()
+        except: pass
+        try: self.th_rowCount.terminate()
+        except: pass
+        set_date = self.date_btn.text()
+        widget.addWidget(MesLotWindow(set_date))
+        widget.setCurrentIndex(widget.currentIndex() + 1)
+        self.deleteLater()
+################################################################################################################
+#DETAIL Window
+class MesInteriorDetailWindow(QDialog):
+    def __init__(self, gubun, lot, reg_no, date):
+        super(MesInteriorDetailWindow, self).__init__()
+        loadUi("ui\DAESUNG_MES_DI.ui", self)
+        
+        DaesungFunctions.setDetailStyle(self, date, WC_CODE, PROC_CODE, gubun, lot, reg_no) #기본 셋팅
+        self.ORDER = 'DJAKUP.WIDX, DJAKUP.LENX,'
+        
+        self.JAKUP_APPR_FLAG = '2'
+        self.PROC_CODE, self.W_DATA = "MPJAKUP.PROC_CODE = '{0}'".format(PROC_CODE), ''
+        
+        self.connectPrint()
+        self.DBload() #DB로드
+        
+        self.tableWidget.horizontalHeader().sectionClicked.connect(self.selectedAll)
+        self.select_all.clicked.connect(lambda: self.selectedAll(3))
+        
+        self.print_btn.clicked.connect(self.printLabel) #라벨 발행
+        self.jackup_btn.clicked.connect(lambda: DaesungFunctions.jackupPrint(self, WC_CODE, PROC_CODE, lot, EMPL_CODE, '')) #작업지시서 인쇄
+       
+        self.tableWidget.currentCellChanged.connect(self.connectTable)
+        self.tableWidget.cellPressed.connect(self.clickedRow)
+        self.tableWidget.cellClicked.connect(self.clickedRow)
+        
+        # 화살표버튼 --------------------------------------------------
+        self.top.clicked.connect(lambda: DaesungFunctions.topData(self))
+        self.prev.clicked.connect(lambda: DaesungFunctions.prevData(self))
+        self.next.clicked.connect(lambda: DaesungFunctions.nextData(self))
+        self.bottom.clicked.connect(lambda: DaesungFunctions.bottomData(self))
+        
+        # # 상단버튼 --------------------------------------------------
+        self.DB_btn.clicked.connect(self.resetLight)
+        self.set_btn.clicked.connect(self.setData)
+        self.log_btn.clicked.connect(self.logWindow)
+        self.as_btn.clicked.connect(lambda: DaesungFunctions.openUrl(self))
+        self.back_btn.clicked.connect(self.back)
+    
+    def connectPrint(self):
+        try:
+            self.set_win = SetWindow()
+            if self.set_win.printer_check.isChecked():
+                self.ip = self.set_win.printer_ip_input.text()
+                self.port = int(self.set_win.printer_port_input.text())
+                self.mode =  '^' + self.set_win.printer_mode_input.text().replace(' ', '')
+                #---------------------------------------------------------------------
+                print_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+                print_socket.settimeout(0.5)
+                print_socket.connect((self.ip, self.port))
+                print_socket.close()
+                #---------------------------------------------------------------------
+                self.printer_flag = "success"
+                logging.debug("connectPrint : 프린트 연결 성공")
+                self.print_status.setStyleSheet("background-color: #55cba7;") #green
+            else:
+                self.printer_flag = "unable"
+                logging.debug("connectPrint : 프린트 비활성")
+                self.print_status.setStyleSheet("background-color: #CDCDCD;") #gray
+        except:
+            self.printer_flag = "failed"
+            logging.debug("connectPrint : 프린트 연결 실패")
+            self.print_status.setStyleSheet("background-color: #fd97a5;") #red
+    
+    #---------------------------------------------------------------------------------------------------
+    def setCheckFlag(self):
+        try:
+            self.set_check = []
+            for count, checkbox in enumerate(self.checkBoxList):
+                if checkbox.isChecked() == True: self.set_check.append(count)
+        except: pass
+        
+    def DBload(self):
+        self.setCheckFlag()
+        self.tableWidget.clearSelection()
+        self.tableWidget.setRowCount(0)
+        self.checkBoxList = []
+        #----------------------------------------------------------------------------
+        D_rows = DaesungQuery.selectDetailList(self, self.REG_NO, '%', '%', self.s_date, PROC_CODE, self.ORDER)
+        #----------------------------------------------------------------------------
+        if D_rows == 'failed': self.connectDBThread()
+        elif D_rows == ():
+            logging.debug("DBload : 작업지시서 취소됨")
+            MessageWindow(self, "해당 작업지시서가 취소되었습니다.").showModal()
+            self.back()
+        else:
+            try:
+                self.tableWidget.setRowCount(len(D_rows))
+                for i in range(len(D_rows)):
+                    self.tableWidget.setRowHeight(i, 85)
+                    ckbox = QCheckBox()
+                    ckbox.setStyleSheet(t_checkStyle)
+                    self.checkBoxList.append(ckbox)
+                    #----------------------------------------------------------------------------
+                    for count, j in enumerate(['CHECK', 'REG_SEQ', 'HOPE_DATE', 'BUYER_NAME', 'ITEM_TEXT', 'SPCL_NAME', 'KYU', 'QTY_NO_ALL', 'PRT_FLAG', 'SEQ_QTY', 'ITEM_CODE']):
+                        if j == 'CHECK':
+                            cellWidget = QWidget()
+                            layoutCB = QHBoxLayout(cellWidget)
+                            layoutCB.addWidget(self.checkBoxList[i])
+                            layoutCB.setAlignment(QtCore.Qt.AlignCenter)
+                            layoutCB.setContentsMargins(0, 0, 0, 0)
+                            cellWidget.setLayout(layoutCB)
+                            self.tableWidget.setCellWidget(i, count, cellWidget)
+                            if i in self.set_check: self.checkBoxList[i].setChecked(True)
+                        elif j == 'PRT_FLAG':
+                            states = QPushButton()
+                            if D_rows[i][j] == '1': states.setStyleSheet(stateBtnStyle + "background-image: url(./img/완료.png);")
+                            else: states.setStyleSheet("background: none; border: none;")
+                            self.state_group.addButton(states, i)
+                            self.tableWidget.setCellWidget(i, count, states)
+                        elif j == '': self.tableWidget.setItem(i, count, QTableWidgetItem(''))
+                        else:
+                            print_data = D_rows[i][j]
+                            if print_data == None: print_data = ''
+                            elif j == 'HOPE_DATE': print_data = "{0}/{1}".format(print_data[4:6], print_data[6:8])
+                            elif j == 'QTY': print_data = int(print_data)
+                            item_data = QTableWidgetItem(str(print_data))
+                            if j == 'REG_SEQ' or j == 'HOPE_DATE': item_data.setTextAlignment(Qt.AlignVCenter | Qt.AlignCenter)
+                            elif j == 'KYU' or j == 'QTY': item_data.setTextAlignment(Qt.AlignVCenter | Qt.AlignRight)
+                            elif j == 'QTY_NO_ALL': item_data.setTextAlignment(Qt.AlignVCenter | Qt.AlignRight)
+                            self.tableWidget.setItem(i, count, item_data)
+                #----------------------------------------------------------------------------
+                c_item_code = ''
+                for i in range(self.tableWidget.rowCount()):
+                    item_code = self.tableWidget.item(i, 10).text()
+                    if item_code in ['19010004', '19010005', '19010008', '19010022', '19010024', '19010026', '19010020', '19010001']:
+                        if item_code == c_item_code: self.tableWidget.hideRow(i)
+                        else:
+                            item_data = QTableWidgetItem('1')
+                            item_data.setTextAlignment(Qt.AlignVCenter | Qt.AlignRight)
+                            self.tableWidget.setItem(i, 7, item_data)
+                        c_item_code = item_code
+
+                print("PROC_CODE = ", PROC_CODE)
+                DaesungFunctions.tableWidth(self, PROC_CODE, WC_CODE, len(D_rows))
+                if self.reload_num == 0:
+                    try:
+                        self.th_rowCount = lotCountThread(self.s_date, self.PROC_CODE, self.JAKUP_APPR_FLAG, self.W_DATA)
+                        self.th_rowCount.sig_data.connect(self.newData)
+                        self.th_rowCount.start()
+                        self.reload_num = 1
+                    except: logging.debug("DBload : th_rowCount 실패")
+                self.DB_btn.setStyleSheet("background-color: #55cba7;") #green
+            except: logging.debug("DBload : table 로드 실패")
+    
+    #라벨 발행
+    def printLabel(self):
+        checkArray, l_count = [], 1
+        if self.printer_flag == "success":
+            for count, checkbox in enumerate(self.checkBoxList):
+                if checkbox.isChecked() == True: checkArray.append(count)
+            if checkArray != []:
+                try:
+                    self.mysocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+                    self.mysocket.settimeout(0.5)
+                    self.mysocket.connect((self.ip, self.port))
+                    self.print_status.setStyleSheet("background-color: #55cba7;") #green
+                    try: self.th_rowCount.terminate()
+                    except: pass
+                    self.fileName, mode_edit, hole_flag, PROC = if_label, self.set_win.printer_mode_check, 0, PROC_CODE
+                    try:
+                        t_count = len(checkArray)
+                        for i in checkArray:
+                            REG_SEQ, QTY_NO, SEQ_QTY = self.tableWidget.item(i, 1).text(), self.tableWidget.item(i, 7).text(), self.tableWidget.item(i, 9).text()
+                            f_name = open(self.fileName, 'r', encoding = 'utf-8')
+                            textData = f_name.read()
+                            f_name.close()
+                            if self.mode == '^MMC' and mode_edit.isChecked() == True:
+                                if l_count == t_count or l_count == self.count:
+                                    textData = textData.replace("^CI28^MMT", "^CI28^MMC")
+                                    t_count = t_count - l_count
+                                    l_count = 0
+                            elif self.mode != '^MMC' and mode_edit.isChecked() == True: textData = textData.replace("^CI28", "^CI28" + self.mode)
+                            if self.set_win.printer_po_check.isChecked() == True: textData = textData.replace("^LS0", "^LS0^POI")
+                            elif self.set_win.printer_po_check.isChecked() == False: textData = textData.replace("^LS0", "^LS0^PON")
+                            #----------------------------------------------------------------------------
+                            P_rows = DaesungQuery.selectDetailList(self, self.REG_NO, REG_SEQ, SEQ_QTY, self.s_date, PROC, self.ORDER)
+                            print(P_rows)
+                            #----------------------------------------------------------------------------
+                            if P_rows == 'failed': self.connectDBThread()
+                            elif P_rows != []:
+                                try:
+                                    for i in ['REG_NO', 'LOT_NUMB', 'REG_SEQ', 'REG_DATE', 'HOPE_DATE', 'LENX', 'WIDX', 'TIKX', 'LW', 'W', 'L', 'CAL_HOLE_VALUE', 'ITEM_MA_NAME', 'ITEM_NAME', 'SPCL_NAME', 'EDGE_NAME', 'GLAS_NAME', 'CONN_CPROC_NAME', 'QTY_NO_ALL', 'QTY', 'BUYER_NAME', 'TRANS_FLAG_NAME', 'BIGO', 'CPROC_BIGO', 'LABEL_BIGO', 'BAR_CODE', 'FSET_FLAG_NAME', 'CONN_CPROC_NAME_BIGO', 'KYU']:
+                                        if i == 'CONN_CPROC_NAME_BIGO':
+                                            #----------------------------------------------------------------------------
+                                            CONN_CPROC_NAME_BIGO = DaesungQuery.selectConnBigo(self, self.REG_NO, REG_SEQ)
+                                            #----------------------------------------------------------------------------
+                                            print_data = CONN_CPROC_NAME_BIGO[0]['CONN_CPROC_NAME_BIGO']
+                                        elif i == 'LW':
+                                            if P_rows[0]['WIDX'] == None: widx = '-'
+                                            else: widx = int(P_rows[0]['WIDX'])
+                                            if P_rows[0]['LENX'] == None: lenx = '-'
+                                            else: lenx = int(P_rows[0]['LENX'])
+                                            print_data = str(widx)[:-2].zfill(2) + str(lenx)[:-2].zfill(2)
+                                        elif i == 'W':
+                                            if P_rows[0]['WIDX'] == None: print_data = ''
+                                            else: print_data = int(P_rows[0]['WIDX']) - 10
+                                        elif i == 'L':
+                                            if P_rows[0]['LENX'] == None: print_data = ''
+                                            else: print_data = int(P_rows[0]['LENX']) + 10
+                                        else:
+                                            print_data = P_rows[0][i]
+                                            if print_data == None: print_data = ""
+                                            elif i == 'REG_DATE' or i == 'HOPE_DATE': print_data = "{0}.{1}.{2}".format(print_data[2:4], print_data[4:6], print_data[6:8]) 
+                                            elif i == 'LENX' or i == 'WIDX' or i == 'TIKX': print_data = int(print_data)
+                                            elif i == 'CAL_HOLE_VALUE' and hole_flag == 1: print_data = '(%d)'%int(print_data)
+                                            elif i == 'CAL_HOLE_VALUE' and hole_flag == 0: print_data = str(int(print_data))
+                                            elif i == 'QTY_NO_ALL': print_data = QTY_NO
+                                            elif i == 'QTY': print_data = '{0}/{1}'.format(P_rows[0]['SEQ_QTY'], int(print_data))
+                                        textData = textData.replace("{%s}"%i, str(print_data))
+                                    self.mysocket.send(textData.encode())
+                                    l_count += 1
+                                    try:
+                                        #----------------------------------------------------------------------------
+                                        if P_rows[0]['PRT_FLAG'] != '1': DaesungQuery.LABEL_UPDATE_SQL(self, self.REG_NO, REG_SEQ, SEQ_QTY)
+                                        #----------------------------------------------------------------------------
+                                        M_rows = DaesungQuery.selectMakeData(self, PROC, P_rows[0]['BAR_CODE'])
+                                        #----------------------------------------------------------------------------
+                                        if M_rows == (): DaesungQuery.PR_SAVE_MAKE_BAR_DETAIL(self, 'insert', '0', EMPL_CODE, self.REG_NO, P_rows[0]['REG_SEQ'], P_rows[0]['SORT_KEY'], P_rows[0]['BAR_CODE'], self.c_date, 1, 0) #실적등록
+                                        time.sleep(0.3)
+                                    except: pass
+                                except: logging.debug("printLabel : selectDetailList 실패")
+                            else: logging.debug("printLabel : 등록된 바코드 없음")
+                        #----------------------------------------------------------------------------
+                        DaesungQuery.SELECT_PR_PASS_JAKUP_MAKE(self)
+                        #----------------------------------------------------------------------------
+                        self.mysocket.close()
+                    except: logging.debug("printLabel : select 실패")
+                    self.DBload()
+                    self.th_rowCount.start()
+                except:
+                    self.print_status.setStyleSheet("background-color: #fd97a5;") #red
+                    logging.debug("printLabel : 프린터 연결 실패")
+            else: MessageWindow(self, "출력할 라벨을 선택해주세요.").showModal()
+        else: MessageWindow(self, "프린터를 연결해주세요.").showModal()
+    
+    #---------------------------------------------------------------------------------------------------
+    def connectTable(self, row):
+        self.checkBoxList[row].setChecked(True)
+    
+    def clickedRow(self, row):
+        s_index, s_row = -1, []
+        for item in self.tableWidget.selectedIndexes():
+            if s_index != item.row():
+                    s_index = item.row()
+                    s_row.append(s_index)
+        for i in range(self.tableWidget.rowCount()):
+            if i in s_row: self.checkBoxList[row].setChecked(True)
+            else: self.checkBoxList[i].setChecked(False)
+        self.checkBoxList[row].setChecked(True)
+    
+    def selectedAll(self, num):
+        if num == 3 and self.check_flag == False:
+            for checkbox in self.checkBoxList: checkbox.setChecked(True)
+            self.check_flag = True
+        elif num == 3 and self.check_flag == True:
+            for checkbox in self.checkBoxList: checkbox.setChecked(False)
+            self.check_flag = False
+    
+    #---------------------------------------------------------------------------------------------------
+    @pyqtSlot(int, str)
+    def newData(self, count, time):
+        global DATA_COUNT, JAKUP_TIME
+        if time == 'f': self.connectDBThread()
+        elif time == 'None':
+            MessageWindow(self, "해당 작업지시서가 취소되었습니다.").showModal()
+            self.back()
+        elif count == DATA_COUNT and int(time) == JAKUP_TIME: self.DB_btn.setStyleSheet("background-color: #55cba7;") #green
+        elif count != DATA_COUNT or int(time) != JAKUP_TIME:
+            self.DB_btn.setStyleSheet("background-color: #fd97a5;") #red
+            DATA_COUNT = count
+            JAKUP_TIME = int(time)
+    
+    @pyqtSlot(int)
+    def FormatSlot(self, num):
+        if num == 3:
+            try: light_ser.write('RY 1 0\r'.encode()) #green light
+            except: pass
+    
+    #---------------------------------------------------------------------------------------------------
+    def resetLight(self):
+        try: light_ser.write('RY 1 0\r'.encode()) #green light
+        except: pass
+        self.DB_btn.setStyleSheet("background-color: #55cba7;") #green
+    
+    def setData(self):
+        try:
+            SetWindow().showModal()
+            self.connectPrint()
         except: logging.debug("setData : 상세페이지 연결 실패")
     
     def logWindow(self):

@@ -239,6 +239,8 @@ class DaesungFunctions(QDialog):
             self.prt_group = QButtonGroup()
             self.tableWidget.hideColumn(10) #발행
             self.tableWidget.hideColumn(11) #바코드
+        elif WC_CODE == '19':
+            for h in [3, 5, 9, 10]: self.tableWidget.hideColumn(h)
         else:
             self.tableWidget.hideColumn(6) #거래처
             self.tableWidget.hideColumn(14) #바코드
@@ -258,13 +260,9 @@ class DaesungFunctions(QDialog):
                 else:
                     for h in [8, 10, 11]: self.tableWidget.hideColumn(h)
                     if PROC_CODE != '0101':
-                        if WC_CODE == '19':
-                            self.label_combo.hide()
-                            # self.tableWidget.hideColumn(3)
-                        else:
-                            self.print_frame.hide()
-                            self.label_combo.hide()
-                            self.tableWidget.hideColumn(3)
+                        self.print_frame.hide()
+                        self.label_combo.hide()
+                        self.tableWidget.hideColumn(3)
             self.tableWidget.setHorizontalHeaderLabels(self.t_text)
     
     def setAutoStyle(self, date, PROC_CODE, PROC_NAME):
@@ -441,6 +439,14 @@ class DaesungFunctions(QDialog):
             self.tableWidget2.setColumnWidth(5, 104)
             self.tableWidget2.setColumnWidth(6, 100)
             self.tableWidget2.setColumnWidth(8, 100)
+        elif count == '19':
+            self.tableWidget.setColumnWidth(0, 80)
+            self.tableWidget.setColumnWidth(1, 100)
+            self.tableWidget.setColumnWidth(2, 100)
+            self.tableWidget.setColumnWidth(4, 450)
+            self.tableWidget.setColumnWidth(6, 180)
+            self.tableWidget.setColumnWidth(7, 120)
+            self.tableWidget.setColumnWidth(8, 50)
         elif code.find('PACK') >= 0:
             if code == 'PACK':
                 if len <= 7: heix = 95

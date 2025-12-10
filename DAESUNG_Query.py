@@ -233,6 +233,7 @@ class DaesungQuery(QDialog):
                 BJAKUP.PRT_FLAG,  /*출력유무*/
                 ITEM.ITEM_MA_NAME,
                 ITEM.ITEM_NAME,
+                ITEM.ITEM_CODE,
                 CONCAT(ITEM.ITEM_MA_NAME, '/', ITEM.ITEM_NAME) ITEM_TEXT,
                 SPCL.SPCL_NAME,
                 GLAS.GLAS_NAME,
