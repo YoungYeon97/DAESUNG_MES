@@ -1614,7 +1614,7 @@ class MesInteriorDetailWindow(QDialog):
         self.DBload() #DB로드
         
         self.tableWidget.horizontalHeader().sectionClicked.connect(self.selectedAll)
-        self.select_all.clicked.connect(lambda: self.selectedAll(3))
+        self.select_all.clicked.connect(lambda: self.selectedAll(0))
         
         self.print_btn.clicked.connect(self.printLabel) #라벨 발행
         self.jackup_btn.clicked.connect(lambda: DaesungFunctions.jackupPrint(self, WC_CODE, PROC_CODE, lot, EMPL_CODE, '')) #작업지시서 인쇄
@@ -1720,17 +1720,18 @@ class MesInteriorDetailWindow(QDialog):
                             self.tableWidget.setItem(i, count, item_data)
                 #----------------------------------------------------------------------------
                 c_item_code = ''
-                for i in range(self.tableWidget.rowCount()):
+                for i in reversed(range(self.tableWidget.rowCount())):
                     item_code = self.tableWidget.item(i, 10).text()
                     if item_code in ['19010004', '19010005', '19010008', '19010022', '19010024', '19010026', '19010020', '19010001']:
-                        if item_code == c_item_code: self.tableWidget.hideRow(i)
+                        if item_code == c_item_code:
+                            self.tableWidget.removeRow(i)
+                            self.checkBoxList.pop(i)
                         else:
                             item_data = QTableWidgetItem('1')
                             item_data.setTextAlignment(Qt.AlignVCenter | Qt.AlignRight)
                             self.tableWidget.setItem(i, 7, item_data)
                         c_item_code = item_code
 
-                print("PROC_CODE = ", PROC_CODE)
                 DaesungFunctions.tableWidth(self, PROC_CODE, WC_CODE, len(D_rows))
                 if self.reload_num == 0:
                     try:
@@ -1774,7 +1775,6 @@ class MesInteriorDetailWindow(QDialog):
                             elif self.set_win.printer_po_check.isChecked() == False: textData = textData.replace("^LS0", "^LS0^PON")
                             #----------------------------------------------------------------------------
                             P_rows = DaesungQuery.selectDetailList(self, self.REG_NO, REG_SEQ, SEQ_QTY, self.s_date, PROC, self.ORDER)
-                            print(P_rows)
                             #----------------------------------------------------------------------------
                             if P_rows == 'failed': self.connectDBThread()
                             elif P_rows != []:
@@ -1805,8 +1805,13 @@ class MesInteriorDetailWindow(QDialog):
                                             elif i == 'CAL_HOLE_VALUE' and hole_flag == 1: print_data = '(%d)'%int(print_data)
                                             elif i == 'CAL_HOLE_VALUE' and hole_flag == 0: print_data = str(int(print_data))
                                             elif i == 'QTY_NO_ALL': print_data = QTY_NO
-                                            elif i == 'QTY': print_data = '{0}/{1}'.format(P_rows[0]['SEQ_QTY'], int(print_data))
+                                            elif i == 'QTY':
+                                                item_code = P_rows[0]['ITEM_CODE']
+                                                if item_code in ['19010004', '19010005', '19010008', '19010022', '19010024', '19010026', '19010020', '19010001']:
+                                                    print_data = '1'
+                                                else: print_data = '{0}/{1}'.format(P_rows[0]['SEQ_QTY'], int(print_data))
                                         textData = textData.replace("{%s}"%i, str(print_data))
+                                    print(textData)
                                     self.mysocket.send(textData.encode())
                                     l_count += 1
                                     try:
@@ -1849,10 +1854,10 @@ class MesInteriorDetailWindow(QDialog):
         self.checkBoxList[row].setChecked(True)
     
     def selectedAll(self, num):
-        if num == 3 and self.check_flag == False:
+        if num == 0 and self.check_flag == False:
             for checkbox in self.checkBoxList: checkbox.setChecked(True)
             self.check_flag = True
-        elif num == 3 and self.check_flag == True:
+        elif num == 0 and self.check_flag == True:
             for checkbox in self.checkBoxList: checkbox.setChecked(False)
             self.check_flag = False
     
