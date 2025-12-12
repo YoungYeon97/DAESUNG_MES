@@ -240,7 +240,7 @@ class DaesungFunctions(QDialog):
             self.tableWidget.hideColumn(10) #발행
             self.tableWidget.hideColumn(11) #바코드
         elif WC_CODE == '19':
-            for h in [3, 5, 9]: self.tableWidget.hideColumn(h)
+            for h in [3, 5, 9, 10]: self.tableWidget.hideColumn(h)
         else:
             self.tableWidget.hideColumn(6) #거래처
             self.tableWidget.hideColumn(14) #바코드

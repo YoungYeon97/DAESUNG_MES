@@ -57,6 +57,7 @@ class DaesungQuery(QDialog):
             WHERE EMPL.COMP_CODE = '{COMP_CODE}'
               AND EMPL.DEPT_CODE LIKE '%'
               AND EMPL.MES_PASS_WORD IS NOT NULL
+              AND TRIM(EMPL.MES_PASS_WORD) <> ''
               AND EMPL.OUT_FLAG LIKE '%0'""".format(COMP_CODE = COMP_CODE)
             cursor_item.execute(sql_item)
             E_rows = cursor_item.fetchall()

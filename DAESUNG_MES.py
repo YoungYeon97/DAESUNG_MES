@@ -1722,8 +1722,9 @@ class MesInteriorDetailWindow(QDialog):
                 c_item_code = ''
                 for i in reversed(range(self.tableWidget.rowCount())):
                     item_code = self.tableWidget.item(i, 10).text()
+                    seq_num = self.tableWidget.item(i, 1).text()
                     if item_code in ['19010004', '19010005', '19010008', '19010022', '19010024', '19010026', '19010020', '19010001']:
-                        if item_code == c_item_code:
+                        if item_code == c_item_code and seq_num == c_seq_num:
                             self.tableWidget.removeRow(i)
                             self.checkBoxList.pop(i)
                         else:
@@ -1731,6 +1732,7 @@ class MesInteriorDetailWindow(QDialog):
                             item_data.setTextAlignment(Qt.AlignVCenter | Qt.AlignRight)
                             self.tableWidget.setItem(i, 7, item_data)
                         c_item_code = item_code
+                        c_seq_num = seq_num
 
                 DaesungFunctions.tableWidth(self, PROC_CODE, WC_CODE, len(D_rows))
                 if self.reload_num == 0:
