@@ -460,6 +460,269 @@ class DaesungQuery(QDialog):
         
         return D_rows
     
+    def selectDetailList_cencel(self, REG_NO, REG_SEQ, SEQ_QTY, s_date, PROC_CODE, ORDER):
+        cursor_item.execute('RESET QUERY CACHE;')
+        sql_item = """
+        SELECT MJAKUP.REG_NO,
+                MJAKUP.REG_DATE,
+                MJAKUP.JAKUP_FLAG,
+                MJAKUP.LOT_NUMB,
+                MJAKUP.BIGO as MBIGO,
+                DJAKUP.REG_SEQ,
+                PJAKUP.SORT_KEY,
+                DJAKUP.MES_PRT_FLAG,
+                DJAKUP.HOPE_DATE,  /*희낭납기일*/
+                DJAKUP.KYU,
+                DJAKUP.LENX,
+                DJAKUP.WIDX,
+                DJAKUP.TIKX,
+                DJAKUP.ABS_LENX,
+                DJAKUP.ABS_WIDX,
+                DJAKUP.ABS_QTY,
+                DJAKUP.QTY,
+                DJAKUP.HOLE_FLAG,
+                DJAKUP.HOLE_VALUE,
+                DJAKUP.CAL_HOLE_VALUE, /*하부값 OR 상부값*/
+                CASE WHEN DJAKUP.EDGE_FLAG = '1' THEN '일면'
+                     WHEN DJAKUP.EDGE_FLAG = '2' THEN '일면2'
+                     WHEN DJAKUP.EDGE_FLAG = '3' THEN '양면' 
+                     ELSE '-' END AS EDGE_NAME,
+                DJAKUP.CONN_CPROC_NAME,
+                DJAKUP.SET_FLAG,
+                DJAKUP.CPROC_BIGO,
+                DJAKUP.LABEL_BIGO as LABEL_BIGO,
+                DJAKUP.BIGO as BIGO,
+                CONCAT(FORMAT(ROW_NUMBER() OVER (PARTITION BY BJAKUP.COMP_CODE, BJAKUP.REG_NO, BJAKUP.REG_SEQ ORDER BY BJAKUP.COMP_CODE, BJAKUP.REG_NO, BJAKUP.REG_SEQ, BJAKUP.SEQ_QTY), 0), '/',
+                FORMAT(COUNT(1) OVER(PARTITION BY BJAKUP.COMP_CODE, BJAKUP.REG_NO, BJAKUP.REG_SEQ), 0)) QTY_NO_ALL,  /*수량텍스트*/
+                BJAKUP.SEQ_QTY,
+                BJAKUP.PRT_FLAG,  /*출력유무*/
+                ITEM.ITEM_MA_NAME,
+                ITEM.ITEM_NAME,
+                ITEM.ITEM_CODE,
+                CONCAT(ITEM.ITEM_MA_NAME, '/', ITEM.ITEM_NAME) ITEM_TEXT,
+                SPCL.SPCL_NAME,
+                GLAS.GLAS_NAME,
+                TRANS.TRANS_FLAG_NAME,
+                BUYER.BUYER_NAME,
+	        PRJT.PRJT_NAME,		
+                BJAKUP.BAR_CODE,
+                IF(IFNULL(DORDR.FSET_SEQ, '') = '', '일반품', 'SET') FSET_FLAG_NAME,
+                (SELECT IFNULL((SELECT BAR_CODE FROM FG_MAKE_BAR_CODE WHERE PROC_CODE = '{PROC_CODE}' AND BAR_CODE = BJAKUP.BAR_CODE LIMIT 1), '0') AS BAR_CODE
+                FROM FG_MAKE_BAR_CODE LIMIT 1) AS BAR_FLAG,
+                PMAKE.PROC_CODE P_PROC_CODE,
+                PMAKE.LK_MAKE_FLAG P_LK_MAKE_FLAG,
+                CASE WHEN INSTR(ITEM.ITEM_NAME,'행거') > 0 OR INSTR(ITEM.ITEM_NAME,'후시마') > 0 THEN 'Y' ELSE 'N' END BT_YN, /* 하부옵션Y = H바에 -35해서 컷팅*/
+                CASE WHEN 
+                INSTR(ITEM.ITEM_NAME,'행거')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '326') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '327') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '328') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '375')
+                > 0 THEN  'Y' ELSE 'N' END DR1_YN, /* 보강규칙 #1 행거용 (5) */
+                
+                CASE WHEN 
+                INSTR(ITEM.ITEM_NAME,'후시마')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '051')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '067') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '229') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '378') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '379') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '382') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '383')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '427')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '428')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '444')
+                > 0 THEN  'Y' ELSE 'N' END DR3_YN, /* 보강규칙 #3 후시마 (10) */
+                    
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '048')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '049') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '453') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '454') 
+                > 0 THEN  'Y' ELSE 'N' END DR4_YN, /* 보강규칙 #4 윈드컷 (4) */
+                
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '043')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '400') 
+                > 0 THEN  'Y' ELSE 'N' END DR5_YN, /* 보강규칙 #5 도어체크 (2) */
+                
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '102')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '103') 
+                > 0 THEN  'Y' ELSE 'N' END DR6_YN, /* 보강규칙 #6 바람막이 (2) */
+                
+                CASE WHEN 
+                (CASE WHEN DJAKUP.LENX >= 2400 THEN 1 ELSE 0 END)   /* 길이 2400이상 */
+                + (CASE WHEN DJAKUP.WIDX >= 1200 THEN 1 ELSE 0 END)   /* 폭 1200이상 */
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '039')
+                > 0 THEN  'Y' ELSE 'N' END DR7_YN, /* 보강규칙 #7 4면보강 (1)*/
+                
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '405')
+                > 0 THEN  'Y' ELSE 'N' END DR8_YN, /* 보강규칙 #8 2면보강(=상하보강) (1) */
+                
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '053')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '054')
+                > 0 THEN  'Y' ELSE 'N' END DR9_YN, /* 보강규칙 #9 노출행거 (2) */
+                
+                CASE WHEN 
+                -- (CASE WHEN DJAKUP.LENX >= 1970 THEN 1 ELSE 0 END)   /* 길이 1970이상 */
+                CASE WHEN IFNULL(DJAKUP.CAL_HOLE_VALUE, 0) = 0 THEN 0
+                 ELSE (CASE WHEN DJAKUP.CAL_HOLE_VALUE > (DJAKUP.LENX/2)+150 OR DJAKUP.CAL_HOLE_VALUE < (DJAKUP.LENX/2)-150 THEN 1 ELSE 0 END) END /* 상부값+150||-150외 범위 */ 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '040')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '628') /*1면보강(다대L33)*/
+                > 0 THEN  'Y' ELSE 'N' END DR10_YN, /* 보강규칙 #10 일자손잡이보강 (1)*/
+                    
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '042')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '050') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '093') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '094') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '096') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '274') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '276') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '278') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '457') 
+                > 0 THEN  'Y' ELSE 'N' END DR11_YN, /* 보강규칙 #11 모티스레버 (9) */
+                
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '109')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '445') 
+                > 0 THEN  'Y' ELSE 'N' END DR12_YN, /* 보강규칙 #12 현관보조 잠금장치작업 (2) */
+                
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '114')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '115') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '118') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '119') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '120')     
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '121') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '122') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '123') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '124') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '125') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '224')     
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '225') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '226')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '322') 
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '325')
+                > 0 THEN  'Y' ELSE 'N' END DR13_YN, /* 보강규칙 #13 미서기잠금 (17) */
+                    
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '407')
+                > 0 THEN  'Y' ELSE 'N' END DR14_YN, /* 보강규칙 #14 보조잠금장치 (1) */
+                
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '041')
+                > 0 THEN  'Y' ELSE 'N' END DR15_YN, /* 보강규칙 #15 전자키보강 (1) */
+                
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '075')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '206')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '429')
+                > 0 THEN  'Y' ELSE 'N' END DR16_YN, /* 보강규칙 #16 연동호차 (3)*/
+                
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '045')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '046')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '047')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '181')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '182')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '183')
+                > 0 THEN  'Y' ELSE 'N' END DR17_YN, /* 보강규칙 #17 오도시 (6) */
+                
+                CASE WHEN 
+                (CASE WHEN DJAKUP.TIKX = 45 THEN 1 ELSE 0 END) /* 규격-두께값 45mm */
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '003')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '297')
+                > 0 THEN  'Y' ELSE 'N' END DR18_YN, /* 보강규칙 #18 두께 45mm (2) */
+                
+                CASE WHEN 
+                INSTR(ITEM.ITEM_NAME,'히든')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '081')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '082')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '083')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '084')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '085')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '221')
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '447')
+                > 0 THEN  'Y' ELSE 'N' END DR19_YN, /* 보강규칙 #19 히든도어 (7) */
+                    
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '252') /* 좌우보강 */
+                + INSTR(DJAKUP.CONN_CPROC_CODE, '627') /* 2면보강(다대 L33)) */
+                > 0 THEN  'Y' ELSE 'N' END DR20_YN, /* 보강규칙 #20 좌우손잡이보강 (1) */
+                    
+                CASE WHEN 
+                INSTR(DJAKUP.CONN_CPROC_CODE, '363')  /* [ 363 손잡이타카고정(X) ] = 중앙타카N */
+                > 0 THEN  'N' ELSE 'Y' END TK_YN, /* 그외 조건 - 중앙타카유무 */
+                
+                CASE WHEN
+                INSTR(DJAKUP.CONN_CPROC_CODE, '108') /* [ 108 상부요꼬자석매립 ] = 수동보강Y */
+                > 0 THEN 'Y' ELSE 'N' END MN_YN,  /* 그외 조건 - 수동보강유무 */
+                    
+                /* CASE WHEN DJAKUP.WIDX > 1220 || DJAKUP.LENX > 2420 || DJAKUP.WIDX < 300 || DJAKUP.LENX < 1500 THEN 'Y' ELSE 'N' END NO_YN /* 작업불가 사이즈 */
+                
+                /* 시트지컬러유무 N(필름X,백골) Y(필름O) */     
+                CASE WHEN      
+                    (CASE WHEN
+                        (CASE WHEN DJAKUP.CONN_CPROC_CODE = '' THEN 1 ELSE 0 END)
+                        + INSTR(SPCL.SPCL_CODE, '177')
+                     + INSTR(SPCL.SPCL_CODE, '373')        
+                        + INSTR(SPCL.SPCL_CODE, '977')
+                     + INSTR(SPCL.SPCL_CODE, '877')    
+                        + INSTR(SPCL.SPCL_CODE, 'A77')
+                     + INSTR(SPCL.SPCL_CODE, '277')                        
+                     > 0 THEN  'N' ELSE 'Y' END) = 'N' THEN
+                     CASE WHEN DJAKUP.WIDX > 1260 || DJAKUP.LENX > 2450 || DJAKUP.WIDX < 300 || DJAKUP.LENX < 1500 THEN 'Y' ELSE 'N' END /* 작업불가 사이즈 - 필름X,백골 */
+                 ELSE
+                     CASE WHEN DJAKUP.WIDX > 1220 || DJAKUP.LENX > 2450 || DJAKUP.WIDX < 300 || DJAKUP.LENX < 1500 THEN 'Y' ELSE 'N' END /* 작업불가 사이즈 - 필름O */
+                 END NO_YN
+                    
+        FROM(((((((((((
+            FD_JAKUP_MASTER MJAKUP INNER JOIN FD_JAKUP_DETAIL DJAKUP ON MJAKUP.COMP_CODE = DJAKUP.COMP_CODE AND MJAKUP.REG_NO = DJAKUP.REG_NO)
+                    INNER JOIN FD_JAKUP_PROC PJAKUP ON DJAKUP.COMP_CODE = PJAKUP.COMP_CODE AND DJAKUP.REG_NO = PJAKUP.REG_NO AND DJAKUP.REG_SEQ = PJAKUP.REG_SEQ)
+                    LEFT OUTER JOIN BB_TRANS TRANS ON DJAKUP.TRANS_FLAG = TRANS.TRANS_FLAG)
+                    LEFT OUTER JOIN BC_ITEM ITEM ON DJAKUP.ITEM_CODE = ITEM.ITEM_CODE)
+                    LEFT OUTER JOIN BC_SPCL SPCL ON DJAKUP.SPCL_CODE = SPCL.SPCL_CODE)
+                    LEFT OUTER JOIN BC_GLAS GLAS ON DJAKUP.GLAS_CODE = GLAS.GLAS_CODE)
+                    LEFT OUTER JOIN BE_BUYER BUYER ON DJAKUP.BUYER_CODE = BUYER.BUYER_CODE)
+		    LEFT OUTER JOIN BE_PRJT PRJT ON DJAKUP.PRJT_CODE = PRJT.PRJT_CODE)
+                    INNER JOIN FD_JAKUP_BAR_CODE BJAKUP ON DJAKUP.COMP_CODE = BJAKUP.COMP_CODE AND DJAKUP.REG_NO = BJAKUP.REG_NO AND DJAKUP.REG_SEQ = BJAKUP.REG_SEQ)
+                    LEFT OUTER JOIN DD_ORDR_DETAIL DORDR ON DJAKUP.COMP_CODE = DORDR.COMP_CODE AND DJAKUP.LK_ORDR_NO = DORDR.REG_NO AND DJAKUP.LK_ORDR_SEQ = DORDR.REG_SEQ)
+                    INNER JOIN (SELECT PJAKUP.COMP_CODE,
+                                     PJAKUP.REG_NO,
+                                     PJAKUP.REG_SEQ,
+                                     PJAKUP.SORT_KEY,
+                                     PJAKUP.END_PROC_FLAG,
+                                     PJAKUP.LK_PUT_FLAG,
+                                     PJAKUP.LK_PUT_QTY,
+                                     PJAKUP.LK_MAKE_QTY,
+                                     PJAKUP.LK_MAKE_DATE,
+                                     GROUP_CONCAT(PJAKUP.PROC_CODE ORDER BY PJAKUP.PROC_CODE) AS PROC_CODE,
+                                     GROUP_CONCAT(PJAKUP.LK_MAKE_FLAG ORDER BY PJAKUP.PROC_CODE) AS LK_MAKE_FLAG,
+                                     GROUP_CONCAT(PROC.PROC_NAME) AS PROC_NAME
+                                FROM FD_JAKUP_PROC PJAKUP LEFT OUTER JOIN BP_PROC PROC ON PJAKUP.PROC_CODE = PROC.PROC_CODE
+                               WHERE PJAKUP.COMP_CODE = '{COMP_CODE}'
+                                 AND PJAKUP.REG_NO LIKE '{REG_NO}'
+                                 AND PJAKUP.REG_SEQ LIKE '{REG_SEQ}'
+                            GROUP BY PJAKUP.REG_SEQ
+                            ORDER BY PJAKUP.COMP_CODE, PJAKUP.REG_NO, PJAKUP.REG_SEQ, PJAKUP.SORT_KEY) PMAKE on MJAKUP.COMP_CODE = PMAKE.COMP_CODE AND MJAKUP.REG_NO = PMAKE.REG_NO and DJAKUP.REG_SEQ = PMAKE.REG_SEQ)
+        WHERE DJAKUP.JAKUP_APPR_FLAG ='9'   /*작업지시승인유무 0.대기 2.승인 9.취소*/
+          AND DJAKUP.COMP_CODE = '{COMP_CODE}'
+          AND DJAKUP.REG_NO LIKE '{REG_NO}'
+          AND DJAKUP.REG_SEQ LIKE '{REG_SEQ}'
+          AND BJAKUP.SEQ_QTY LIKE '{SEQ_QTY}'
+          AND DJAKUP.HOPE_DATE = '{s_date}'
+          AND PJAKUP.PROC_CODE = '{PROC_CODE}'
+        ORDER BY {ORDER} DJAKUP.REG_NO, DJAKUP.REG_SEQ, BJAKUP.SEQ_QTY
+        """.format(COMP_CODE = COMP_CODE, REG_NO = REG_NO, REG_SEQ = REG_SEQ, SEQ_QTY = SEQ_QTY, s_date = s_date, PROC_CODE = PROC_CODE, ORDER = ORDER)
+        cursor_item.execute(sql_item)
+        D_rows = cursor_item.fetchall()
+        
+        return D_rows
+    
     #DETAIL > DETAIL 개별전표 조회
     def selectDetailItem(self, DATE, LOT_NUMB, REG_NO, REG_SEQ):
         cursor_item.execute('RESET QUERY CACHE;')

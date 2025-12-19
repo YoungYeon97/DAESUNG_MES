@@ -673,7 +673,10 @@ class MesLotWindow(QDialog):
         DaesungFunctions.setComboStyle(self, date, WC_CODE, PROC_CODE, PROC_NAME, PROC) #기본 셋팅
         self.flag_combo.setCurrentText(PRT_NAME)
         self.sort_num, self.key_flag = [], 0
-        self.JAKUP_APPR_FLAG, self.PROC_CODE, self.W_DATA = '2', "MPJAKUP.PROC_CODE = '{0}'".format(PROC_CODE), ''
+        if WC_CODE == '19':
+            self.JAKUP_APPR_FLAG, self.PROC_CODE, self.W_DATA = '9', "MPJAKUP.PROC_CODE = '{0}'".format(PROC_CODE), ''
+        else:
+            self.JAKUP_APPR_FLAG, self.PROC_CODE, self.W_DATA = '2', "MPJAKUP.PROC_CODE = '{0}'".format(PROC_CODE), ''
         self.jackup_set_btn.hide()
         
         self.hwConnect() #HW연결
@@ -1609,7 +1612,7 @@ class MesInteriorDetailWindow(QDialog):
         
         self.JAKUP_APPR_FLAG = '2'
         self.PROC_CODE, self.W_DATA = "MPJAKUP.PROC_CODE = '{0}'".format(PROC_CODE), ''
-        
+
         self.connectPrint()
         self.DBload() #DB로드
         
@@ -1621,7 +1624,7 @@ class MesInteriorDetailWindow(QDialog):
        
         self.tableWidget.currentCellChanged.connect(self.connectTable)
         self.tableWidget.cellPressed.connect(self.clickedRow)
-        self.tableWidget.cellClicked.connect(self.clickedRow)
+        self.tableWidget.cellClicked.connect(self.clickedRow) 
         
         # 화살표버튼 --------------------------------------------------
         self.top.clicked.connect(lambda: DaesungFunctions.topData(self))
@@ -1675,7 +1678,7 @@ class MesInteriorDetailWindow(QDialog):
         self.tableWidget.setRowCount(0)
         self.checkBoxList = []
         #----------------------------------------------------------------------------
-        D_rows = DaesungQuery.selectDetailList(self, self.REG_NO, '%', '%', self.s_date, PROC_CODE, self.ORDER)
+        D_rows = DaesungQuery.selectDetailList_cencel(self, self.REG_NO, '%', '%', self.s_date, PROC_CODE, self.ORDER)
         #----------------------------------------------------------------------------
         if D_rows == 'failed': self.connectDBThread()
         elif D_rows == ():
