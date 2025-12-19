@@ -1691,7 +1691,7 @@ class MesInteriorDetailWindow(QDialog):
                     ckbox.setStyleSheet(t_checkStyle)
                     self.checkBoxList.append(ckbox)
                     #----------------------------------------------------------------------------
-                    for count, j in enumerate(['CHECK', 'REG_SEQ', 'HOPE_DATE', 'BUYER_NAME', 'ITEM_TEXT', 'SPCL_NAME', 'KYU', 'QTY_NO_ALL', 'PRT_FLAG', 'SEQ_QTY', 'ITEM_CODE']):
+                    for count, j in enumerate(['CHECK', 'REG_SEQ', 'HOPE_DATE', 'BUYER_NAME', 'ITEM_TEXT', 'SPCL_NAME', 'KYU', 'QTY_NO_ALL', 'PRT_FLAG', 'SEQ_QTY', 'ITEM_CODE', 'QTY']):
                         if j == 'CHECK':
                             cellWidget = QWidget()
                             layoutCB = QHBoxLayout(cellWidget)
@@ -1713,6 +1713,8 @@ class MesInteriorDetailWindow(QDialog):
                             if print_data == None: print_data = ''
                             elif j == 'HOPE_DATE': print_data = "{0}/{1}".format(print_data[4:6], print_data[6:8])
                             elif j == 'QTY': print_data = int(print_data)
+                            elif j == 'QTY_NO_ALL': 
+                                if print_data == '1/1': print_data = '1'
                             item_data = QTableWidgetItem(str(print_data))
                             if j == 'REG_SEQ' or j == 'HOPE_DATE': item_data.setTextAlignment(Qt.AlignVCenter | Qt.AlignCenter)
                             elif j == 'KYU' or j == 'QTY': item_data.setTextAlignment(Qt.AlignVCenter | Qt.AlignRight)
@@ -1728,7 +1730,10 @@ class MesInteriorDetailWindow(QDialog):
                             self.tableWidget.removeRow(i)
                             self.checkBoxList.pop(i)
                         else:
-                            item_data = QTableWidgetItem('1')
+                            qty = self.tableWidget.item(i, 11).text()
+                            if item_code in ['19010004', '19010005', '19010022', '19010024', '19010026', '19010020', '19010001']:
+                                item_data = QTableWidgetItem(qty + '미터')
+                            else: item_data = QTableWidgetItem(qty)
                             item_data.setTextAlignment(Qt.AlignVCenter | Qt.AlignRight)
                             self.tableWidget.setItem(i, 7, item_data)
                         c_item_code = item_code
@@ -1748,6 +1753,7 @@ class MesInteriorDetailWindow(QDialog):
     #라벨 발행
     def printLabel(self):
         checkArray, l_count = [], 1
+        # self.printer_flag = "success"
         if self.printer_flag == "success":
             for count, checkbox in enumerate(self.checkBoxList):
                 if checkbox.isChecked() == True: checkArray.append(count)
@@ -1781,7 +1787,7 @@ class MesInteriorDetailWindow(QDialog):
                             if P_rows == 'failed': self.connectDBThread()
                             elif P_rows != []:
                                 try:
-                                    for i in ['REG_NO', 'LOT_NUMB', 'REG_SEQ', 'REG_DATE', 'HOPE_DATE', 'LENX', 'WIDX', 'TIKX', 'LW', 'W', 'L', 'CAL_HOLE_VALUE', 'ITEM_MA_NAME', 'ITEM_NAME', 'SPCL_NAME', 'EDGE_NAME', 'GLAS_NAME', 'CONN_CPROC_NAME', 'QTY_NO_ALL', 'QTY', 'BUYER_NAME', 'TRANS_FLAG_NAME', 'BIGO', 'CPROC_BIGO', 'LABEL_BIGO', 'BAR_CODE', 'FSET_FLAG_NAME', 'CONN_CPROC_NAME_BIGO', 'KYU']:
+                                    for i in ['REG_NO', 'LOT_NUMB', 'REG_SEQ', 'REG_DATE', 'HOPE_DATE', 'LENX', 'WIDX', 'TIKX', 'LW', 'W', 'L', 'CAL_HOLE_VALUE', 'ITEM_MA_NAME', 'ITEM_NAME', 'SPCL_NAME', 'EDGE_NAME', 'GLAS_NAME', 'CONN_CPROC_NAME', 'QTY_NO_ALL', 'QTY', 'BUYER_NAME', 'TRANS_FLAG_NAME', 'BIGO', 'MBIGO', 'CPROC_BIGO', 'LABEL_BIGO', 'BAR_CODE', 'FSET_FLAG_NAME', 'CONN_CPROC_NAME_BIGO', 'KYU', 'QTY_UNIT', 'PRJT_NAME']:
                                         if i == 'CONN_CPROC_NAME_BIGO':
                                             #----------------------------------------------------------------------------
                                             CONN_CPROC_NAME_BIGO = DaesungQuery.selectConnBigo(self, self.REG_NO, REG_SEQ)
@@ -1799,6 +1805,7 @@ class MesInteriorDetailWindow(QDialog):
                                         elif i == 'L':
                                             if P_rows[0]['LENX'] == None: print_data = ''
                                             else: print_data = int(P_rows[0]['LENX']) + 10
+                                        elif i == 'QTY_UNIT': print_data = QTY_NO
                                         else:
                                             print_data = P_rows[0][i]
                                             if print_data == None: print_data = ""
@@ -1814,6 +1821,9 @@ class MesInteriorDetailWindow(QDialog):
                                                 else: print_data = '{0}/{1}'.format(P_rows[0]['SEQ_QTY'], int(print_data))
                                         textData = textData.replace("{%s}"%i, str(print_data))
                                     print(textData)
+                                    for i in range(self.tableWidget.rowCount()):
+                                        if self.check_flag == True: 
+                                            for checkbox in self.checkBoxList: checkbox.setChecked(False)
                                     self.mysocket.send(textData.encode())
                                     l_count += 1
                                     try:
@@ -1862,7 +1872,6 @@ class MesInteriorDetailWindow(QDialog):
         elif num == 0 and self.check_flag == True:
             for checkbox in self.checkBoxList: checkbox.setChecked(False)
             self.check_flag = False
-    
     #---------------------------------------------------------------------------------------------------
     @pyqtSlot(int, str)
     def newData(self, count, time):

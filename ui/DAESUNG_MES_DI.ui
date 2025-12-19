@@ -1030,7 +1030,7 @@ QPushButton#jackup_btn:pressed {
             <number>0</number>
            </property>
            <property name="columnCount">
-            <number>11</number>
+            <number>12</number>
            </property>
            <attribute name="horizontalHeaderVisible">
             <bool>true</bool>
@@ -1204,6 +1204,11 @@ QPushButton#jackup_btn:pressed {
            <column>
             <property name="text">
              <string>ITEM_CODE(10)</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>QTY(11)</string>
             </property>
            </column>
           </widget>
