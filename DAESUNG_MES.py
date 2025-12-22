@@ -1785,7 +1785,7 @@ class MesInteriorDetailWindow(QDialog):
                             if self.set_win.printer_po_check.isChecked() == True: textData = textData.replace("^LS0", "^LS0^POI")
                             elif self.set_win.printer_po_check.isChecked() == False: textData = textData.replace("^LS0", "^LS0^PON")
                             #----------------------------------------------------------------------------
-                            P_rows = DaesungQuery.selectDetailList(self, self.REG_NO, REG_SEQ, SEQ_QTY, self.s_date, PROC, self.ORDER)
+                            P_rows = DaesungQuery.selectDetailList_cancel(self, self.REG_NO, REG_SEQ, SEQ_QTY, self.s_date, PROC, self.ORDER)
                             #----------------------------------------------------------------------------
                             if P_rows == 'failed': self.connectDBThread()
                             elif P_rows != []:
@@ -1838,7 +1838,9 @@ class MesInteriorDetailWindow(QDialog):
                                         if M_rows == (): DaesungQuery.PR_SAVE_MAKE_BAR_DETAIL(self, 'insert', '0', EMPL_CODE, self.REG_NO, P_rows[0]['REG_SEQ'], P_rows[0]['SORT_KEY'], P_rows[0]['BAR_CODE'], self.c_date, 1, 0) #실적등록
                                         time.sleep(0.3)
                                     except: pass
-                                except: logging.debug("printLabel : selectDetailList 실패")
+                                except Exception as e:
+                                    print("ERROR = ", e) 
+                                    logging.debug("printLabel : selectDetailList 실패")
                             else: logging.debug("printLabel : 등록된 바코드 없음")
                         #----------------------------------------------------------------------------
                         DaesungQuery.SELECT_PR_PASS_JAKUP_MAKE(self)
