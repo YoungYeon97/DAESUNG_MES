@@ -1833,9 +1833,9 @@ class MesInteriorDetailWindow(QDialog):
                                         #----------------------------------------------------------------------------
                                         if P_rows[0]['PRT_FLAG'] != '1': DaesungQuery.LABEL_UPDATE_SQL(self, self.REG_NO, REG_SEQ, SEQ_QTY)
                                         #----------------------------------------------------------------------------
-                                        M_rows = DaesungQuery.selectMakeData(self, PROC, P_rows[0]['BAR_CODE'])
+                                        # M_rows = DaesungQuery.selectMakeData(self, PROC, P_rows[0]['BAR_CODE'])
                                         #----------------------------------------------------------------------------
-                                        if M_rows == (): DaesungQuery.PR_SAVE_MAKE_BAR_DETAIL(self, 'insert', '0', EMPL_CODE, self.REG_NO, P_rows[0]['REG_SEQ'], P_rows[0]['SORT_KEY'], P_rows[0]['BAR_CODE'], self.c_date, 1, 0) #실적등록
+                                        # if M_rows == (): DaesungQuery.PR_SAVE_MAKE_BAR_DETAIL(self, 'insert', '0', EMPL_CODE, self.REG_NO, P_rows[0]['REG_SEQ'], P_rows[0]['SORT_KEY'], P_rows[0]['BAR_CODE'], self.c_date, 1, 0) #실적등록
                                         time.sleep(0.3)
                                     except: pass
                                 except Exception as e:
@@ -1843,7 +1843,7 @@ class MesInteriorDetailWindow(QDialog):
                                     logging.debug("printLabel : selectDetailList 실패")
                             else: logging.debug("printLabel : 등록된 바코드 없음")
                         #----------------------------------------------------------------------------
-                        DaesungQuery.SELECT_PR_PASS_JAKUP_MAKE(self)
+                        # DaesungQuery.SELECT_PR_PASS_JAKUP_MAKE(self)
                         #----------------------------------------------------------------------------
                         self.mysocket.close()
                     except: logging.debug("printLabel : select 실패")
