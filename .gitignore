@@ -1,5 +1,5 @@
-/Log
-/__pycache__
-/dist
-/setup
-/build
+Log/
+__pycache__/
+dist/
+setup/
+build/
