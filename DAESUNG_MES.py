@@ -142,6 +142,9 @@ class FormatThread(QThread):
             while True:
                 time.sleep(20)
                 self.sig_data.emit(6)
+        elif self.flag == 'timer':
+            time.sleep(5)
+            self.sig_data.emit(7)
 
 class SocketThread(QThread):
     sig_data = pyqtSignal(str)
@@ -160,7 +163,7 @@ class SocketThread(QThread):
                 self.sig_data.emit("success")
             except: self.sig_data.emit("failed")
             time.sleep(30)
-            
+        
 class SerialThread(QThread):
     sig_data = pyqtSignal(str)
     
@@ -2086,7 +2089,7 @@ class MesWindow(QDialog):
         self.QR_INPUT.returnPressed.connect(self.PressedEnterKey) #QR코드 입력
         self.edgeCode_btn.clicked.connect(self.edgeCode) #엣지코드리스트 화면 연결
         self.state_group.buttonClicked[int].connect(self.itemCancel) #전표 취소
-        
+
         # 상단버튼 --------------------------------------------------
         self.date_btn.clicked.connect(lambda: DaesungFunctions.calendar(self))
         self.set_btn.clicked.connect(self.setData)
@@ -2733,6 +2736,10 @@ class MesEdgeWindow(QDialog):
         loadUi("ui\DAESUNG_MES_E.ui", self)
         
         DaesungFunctions.setAutoStyle(self, date, PROC_CODE, PROC_NAME) #기본 셋팅
+
+        # ✅ 라디오 초기/연결 (auto_radio, manual_radio)
+        #self._setup_mode_radios()
+        self.auto_radio.setChecked(True)
         
         self.hwConnect() #HW연결
         DaesungFunctions.replaceDate(self) #DB로드
@@ -2753,13 +2760,30 @@ class MesEdgeWindow(QDialog):
         self.state_group.buttonClicked[int].connect(self.item1Cancel) #엣지1 취소
         self.state_group2.buttonClicked[int].connect(self.item2Cancel) #엣지2 취소
 
+        self.manual_radio.clicked.connect(self._setup_mode_radios)
+
         # 상단버튼 --------------------------------------------------
+        self.edgeCode_btn.clicked.connect(self.edgeCode) #엣지코드리스트 화면 연결
         self.date_btn.clicked.connect(lambda: DaesungFunctions.calendar(self))
         self.set_btn.clicked.connect(self.setData)
         self.log_btn.clicked.connect(self.logWindow)
         self.as_btn.clicked.connect(lambda: DaesungFunctions.openUrl(self))
         self.exit_btn.clicked.connect(self.exitWindow)
-    
+
+    def edgeCode(self):
+        try: 
+            EdgeCodeWindow().showModal()
+            self.edgeCodeLoad()
+        except: logging.debug("edgeCode : 연결 실패")
+
+    # ✅ 라디오 세팅/이벤트
+    def _setup_mode_radios(self):
+        try:
+            MesEdgeManualWindow(self.s_date).showModal()
+            self.auto_radio.setChecked(True)
+            self.DBload()
+        except Exception as e: logging.debug("MesEdgeManual open : failed(%s)"%e)
+
     def hwConnect(self):
         try:
             self.set_win = SetWindow()
@@ -2767,7 +2791,7 @@ class MesEdgeWindow(QDialog):
             self.connectSensor() #센서 연결
             self.connectPrinter() #바코드 프린터 연결
         except: logging.debug("hwConnect : 실패")
-    
+
     def connectPLC(self):
         global plc_socket
         #-------------------------------------------------------------
@@ -3414,7 +3438,7 @@ class MesEdgeWindow(QDialog):
             except: pass
             try: plc_socket.close()
             except: pass
-            #------------------------------------------
+            #---- --------------------------------------
             try: self.sensor_th.terminate()
             except: pass
             try: self.sensor_con_th.terminate()
@@ -3431,6 +3455,178 @@ class MesEdgeWindow(QDialog):
             except: pass
             try: self.dorna_th.close()
             except: pass
+
+################################################################################################################
+class MesEdgeManualWindow(QDialog):
+    def __init__(self, s_date):
+        super(MesEdgeManualWindow, self).__init__()
+        loadUi("ui\DAESUNG_MES_Manual.ui", self)
+
+        self.exit_btn.setAutoDefault(False)
+        self.exit_btn.setDefault(False)
+
+        self.DB_flag = 0
+        self.s_date = s_date
+        self.c_date = time.strftime('%Y%m%d') #현재일자
+        self.plc_addr = ['440', '444', '446', '448', '450', '452', '454', '456', '458']
+
+        self.tableWidget.setStyleSheet(tableStyle)
+        
+        self.edgeCodeLoad()
+
+        try:
+            self.focus_th = FormatThread("focus")
+            self.focus_th.sig_data.connect(self.FormatSlot)
+            self.focus_th.start()
+        except: pass
+
+        self.QR_input.returnPressed.connect(self.PressedEnterKey) #QR코드 입력
+        self.exit_btn.clicked.connect(lambda: DaesungFunctions.closeWindow(self))
+    
+    def PressedEnterKey(self):
+        QR_CODE = self.QR_input.text().replace('\x02','').replace(" ", '') #공백 제거
+        self.StartData(QR_CODE)
+    
+    def DBload(self):
+        try:
+            try: self.timer_th.terminate()
+            except: pass
+
+            self.tableWidget.setRowCount(0)
+            self.tableWidget.clearContents()
+
+            self.tableWidget.setRowCount(1)
+            self.tableWidget.setRowHeight(0, 100)
+
+            for count, j in enumerate([self.LENX, self.WIDX, self.TIKX, self.EDGE_C, 0, self.EDGE1, self.EDGE2, self.HOLE_V, self.HOLE_F]):
+                item_data = QTableWidgetItem(str(j))
+                print(self.LENX, self.WIDX, self.TIKX, self.EDGE_C, self.EDGE1, self.EDGE2, self.HOLE_V, self.HOLE_F)
+                item_data.setTextAlignment(Qt.AlignVCenter | Qt.AlignCenter)
+                self.tableWidget.setItem(0, count, item_data)
+
+            self.timer_th = FormatThread("timer")
+            self.timer_th.sig_data.connect(self.FormatSlot)
+            self.timer_th.start()
+
+        except: logging.debug("EdgeManual DBload : table 로드 실패")
+
+    @pyqtSlot(str)
+    def StartData(self, QR_CODE):
+        try: self.plc_write_th.terminate()
+        except: pass
+
+        print(QR_CODE)
+        logging.debug('StartData(Edge) : %s'%QR_CODE)
+        #----------------------------------------------------------------------------
+        QR_rows = DaesungQuery.selectCNClabel(self, PROC_CODE, QR_CODE) #QR_CODE 조회
+        print('QR_rows = ', QR_rows)
+        #----------------------------------------------------------------------------
+        if QR_rows == 'failed': 
+            self.connectDBThread()
+        elif QR_rows != ():
+            self.QR_CODE = QR_rows[0]['BAR_CODE']
+            #-------------------------------------------------------------
+            B_rows = DaesungQuery.selectJakupData(self, '%', QR_CODE)
+            if B_rows == None or B_rows['MES_FLAG'] == LINE_FLAG or B_rows['PUT_FLAG'] == 'S' or B_rows['PUT_FLAG'] == 'F':
+                self.JAKUP_NO, self.JAKUP_SEQ = QR_rows[0]['REG_NO'], QR_rows[0]['REG_SEQ']
+                self.JAKUP_SORT_KEY = QR_rows[0]['SORT_KEY']
+                self.LENX, self.WIDX, self.TIKX = int(QR_rows[0]['LENX']), int(QR_rows[0]['WIDX']), int(QR_rows[0]['TIKX'])
+                H_FLAG, H_VALUE = QR_rows[0]['HOLE_FLAG'], QR_rows[0]['HOLE_VALUE']
+                HOLE_V = QR_rows[0]['CAL_HOLE_VALUE']
+                CONN_CPROC_CODE, CPROC_CODE = QR_rows[0]['CONN_CPROC_CODE'].split(','), ''
+                SPCL_CO = QR_rows[0]['SPCL_CODE']
+                
+                for C, CODE in enumerate(CONN_CPROC_CODE):
+                    if C + 1 == len(CONN_CPROC_CODE): CPROC_CODE = CPROC_CODE + "'%s'"%CODE.replace(' ', '').replace("'", '').replace('"', '')
+                    else: CPROC_CODE = CPROC_CODE + "'%s', "%CODE.replace(' ', '').replace("'", '').replace('"', '')
+                #-------------------------------------------------------------
+                if QR_rows[0]['EDGE_FLAG']  == '1': EDGE, self.EDGE1, self.EDGE2 = '일면', 1, 0
+                elif QR_rows[0]['EDGE_FLAG']  == '2': EDGE, self.EDGE1, self.EDGE2 = '일면2', 0, 1
+                elif QR_rows[0]['EDGE_FLAG']  == '3': EDGE, self.EDGE1, self.EDGE2 = '양면', 1, 1
+                else: EDGE, self.EDGE1, self.EDGE2 = '-', 0, 0
+                #-------------------------------------------------------------
+                H_rows = DaesungQuery.selectHoleFlag(self, CPROC_CODE)
+                #-------------------------------------------------------------
+                if HOLE_V == None or HOLE_V <= 0: self.HOLE_F, self.HOLE_V = 0, 0
+                elif self.TIKX != 36 or H_rows != None: self.HOLE_F, self.HOLE_V = 0, 0
+                elif H_FLAG == '3' and 0 < H_VALUE < 700:
+                    self.HOLE_F, self.HOLE_V = 0, 0 
+                    MessageWindow(self, "타공값 700 이상").showModal()
+                else: self.HOLE_F, self.HOLE_V = 1, int(HOLE_V)
+                #-------------------------------------------------------------
+                if (SPCL_CO in self.edge_code): self.EDGE_C = int(self.edge_code.index(SPCL_CO)) + 1
+                elif SPCL_CO == None or SPCL_CO == '': self.EDGE_C = 0
+                else: self.EDGE_C = 7
+                #-------------------------------------------------------------
+                self.plc_write_th = PlcWriteThread([self.LENX, self.WIDX, self.TIKX, self.EDGE_C, 0, self.EDGE1, self.EDGE2, self.HOLE_V, self.HOLE_F], self.plc_addr) #PLC에 값 전송
+                self.plc_write_th.sig_data.connect(self.PLCWriteSlot)
+                self.plc_write_th.start()
+            else: 
+                self.result_data.setText("이미 생산된 제품입니다.")
+            
+    @pyqtSlot(int)
+    def FormatSlot(self, num):
+        if num == 2: self.QR_input.setFocus()
+        elif num == 7: self.close()
+
+    @pyqtSlot(int)
+    def PLCWriteSlot(self, num):
+        if num == 99999: 
+            print('연결실패') 
+            logging.debug("edgeManual : 연결 실패")
+        else:
+            try:
+                print('test')
+                result = DaesungQuery.PR_SAVE_MAKE_BAR(self, 'insert', '0', EMPL_CODE, self.JAKUP_NO, self.JAKUP_SEQ, self.JAKUP_SORT_KEY, self.QR_CODE, self.c_date, 1, 0)
+                if result == 1: self.result_data.setText("생산실적 완료")
+                else: self.result_data.setText("생산실적 실패")
+                #-------------------------------------------------------------
+                SEQ = DaesungQuery.selectEdgeMaxSeq(self, LINE_FLAG, self.s_date[:6])
+                if SEQ['SEQ'] == None: SEQ = 1000
+                else: SEQ = int(SEQ['SEQ']) + 1
+                #-------------------------------------------------------------
+                B_rows = DaesungQuery.selectJakupData(self, LINE_FLAG, self.QR_CODE)
+                if B_rows == None: DaesungQuery.insertEdgeSeq(self, LINE_FLAG, self.s_date[:6], self.QR_CODE, SEQ, '0')
+                else: DaesungQuery.updateEdgeSeq(self, "PUT_FLAG = '0', SEQ = '{0}'".format(SEQ), self.s_date[:6], LINE_FLAG, self.QR_CODE, B_rows['SEQ'])
+                self.DBload()
+            except Exception as e:
+                print('error = ', e)
+
+    #실시간 DB연결
+    def connectDBThread(self):
+        if self.DB_flag == 0:
+            self.DB_flag = 1
+            logging.debug("DBload : DB로드 실패")
+            MessageWindow(self, "DB연결 실패").showModal()
+            #----------------------------------------------------------------------------
+            self.DB_th = ConnectDBThread()
+            self.DB_th.sig_data.connect(self.DbThreadSlot)
+            self.DB_th.start()
+
+    @pyqtSlot(int)       
+    def DbThreadSlot(self, con):
+        if con == 1:
+            self.DB_th.terminate()
+            self.DB_flag = 0
+            #----------------------------------------------------------------------------
+            result = DaesungQuery.connectDB(self, host, port, user, name)
+            #----------------------------------------------------------------------------
+            if result == 'success':
+                self.PressedEnterKey()
+
+    def edgeCodeLoad(self):
+        self.edge_code = []
+        load_wb = load_workbook("엣지코드_리스트.xlsx", data_only = True)
+        load_ws = load_wb['Sheet1']
+        get_cells = load_ws['C3':'C9']
+        for row in get_cells:
+            for cell in row: self.edge_code.append(cell.value)
+
+    def closeWindow(self):
+        self.close()
+    
+    def showModal(self):
+        return super().exec_()
 
 ################################################################################################################
 class PlcPackThread(QThread):

@@ -857,6 +857,85 @@ background-color: #ffffff;</string>
           </widget>
          </item>
          <item>
+          <widget class="QFrame" name="radio_frame">
+           <property name="minimumSize">
+            <size>
+             <width>250</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QRadioButton{
+color: #3f444a
+}
+QRadioButton::indicator{
+border: 3px solid #696969;
+border-radius: 20px;
+background: none;
+width: 35px;
+height: 35px;
+}
+QRadioButton::indicator:checked {
+background: 3px solid #47AD8E;
+border: 3px solid #47AD8E;
+}</string>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::StyledPanel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Raised</enum>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_7">
+            <property name="leftMargin">
+             <number>10</number>
+            </property>
+            <item>
+             <widget class="QRadioButton" name="auto_radio">
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>50</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <family>맑은 고딕</family>
+                <pointsize>17</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>자동</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="manual_radio">
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>50</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <family>맑은 고딕</family>
+                <pointsize>17</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>수동</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
           <widget class="QLabel" name="result_data">
            <property name="minimumSize">
             <size>
@@ -991,6 +1070,43 @@ background-color: #506cb4;
           </widget>
          </item>
         </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="edgeCode_btn">
+        <property name="minimumSize">
+         <size>
+          <width>200</width>
+          <height>55</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>200</width>
+          <height>55</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <family>맑은 고딕</family>
+          <pointsize>19</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton#edgeCode_btn{
+color: #ffffff;
+background:#585858;
+border-radius:5px;
+}
+QPushButton#edgeCode_btn:hover {
+ background-color: #4d4d4d;
+}</string>
+        </property>
+        <property name="text">
+         <string>엣지코드 성정</string>
+        </property>
        </widget>
       </item>
      </layout>

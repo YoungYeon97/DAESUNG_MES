@@ -244,7 +244,16 @@ class DaesungQuery(QDialog):
                 BUYER.BUYER_NAME,
 	        PRJT.PRJT_NAME,		
                 BJAKUP.BAR_CODE,
-                IF(IFNULL(DORDR.FSET_SEQ, '') = '', '일반품', 'SET') FSET_FLAG_NAME,
+                CASE WHEN IFNULL(DORDR.FSET_SEQ, '') = '' THEN '일반품'
+                     WHEN ( SELECT COUNT(DISTINCT D2.HOPE_DATE)
+                            FROM DD_ORDR_DETAIL D2
+                            WHERE D2.COMP_CODE = DJAKUP.COMP_CODE AND D2.REG_NO = DJAKUP.LK_ORDR_NO
+                              AND D2.FSET_SEQ IN (SELECT FSET_SEQ
+                                                   FROM DD_ORDR_DETAIL
+                                                  WHERE COMP_CODE = DJAKUP.COMP_CODE AND REG_NO = DJAKUP.LK_ORDR_NO AND REG_SEQ = DJAKUP.LK_ORDR_SEQ)) > 1 THEN ''
+                     ELSE 'SET'
+                END AS FSET_FLAG_NAME,
+/* 세트품의 희망납기일이 다른경우 Y -> ''  */
                 (SELECT IFNULL((SELECT BAR_CODE FROM FG_MAKE_BAR_CODE WHERE PROC_CODE = '{PROC_CODE}' AND BAR_CODE = BJAKUP.BAR_CODE LIMIT 1), '0') AS BAR_CODE
                 FROM FG_MAKE_BAR_CODE LIMIT 1) AS BAR_FLAG,
                 PMAKE.PROC_CODE P_PROC_CODE,
