@@ -3558,7 +3558,7 @@ class MesEdgeManualWindow(QDialog):
                 elif SPCL_CO == None or SPCL_CO == '': self.EDGE_C = 0
                 else: self.EDGE_C = 7
                 #-------------------------------------------------------------
-                self.plc_write_th = PlcWriteThread([self.LENX, self.WIDX, self.TIKX, self.EDGE_C, 0, self.EDGE1, self.EDGE2, self.HOLE_V, self.HOLE_F], self.plc_addr) #PLC에 값 전송
+                self.plc_write_th = PlcWriteThread([self.LENX * 10, self.WIDX * 10, self.TIKX * 10, self.EDGE_C, 0, self.EDGE1, self.EDGE2, self.HOLE_V * 10, self.HOLE_F], self.plc_addr) #PLC에 값 전송
                 self.plc_write_th.sig_data.connect(self.PLCWriteSlot)
                 self.plc_write_th.start()
             else: 
