@@ -2524,7 +2524,7 @@ class MesWindow(QDialog):
         self.edge_code = []
         load_wb = load_workbook("엣지코드_리스트.xlsx", data_only = True)
         load_ws = load_wb['Sheet1']
-        get_cells = load_ws['C3':'C9']
+        get_cells = load_ws['C3':'C10']
         for row in get_cells:
             for cell in row: self.edge_code.append(cell.value)
     
@@ -2621,8 +2621,8 @@ class EdgeCodeWindow(QDialog):
         super(EdgeCodeWindow, self).__init__()
         loadUi("ui\EdgeCodeList.ui", self)
         
-        self.setFixedSize(722, 641)
-        self.edit_name = [self.edge_1_input, self.edge_2_input, self.edge_3_input, self.edge_4_input, self.edge_5_input, self.edge_6_input, self.edge_7_input]
+        self.setFixedSize(722, 721)
+        self.edit_name = [self.edge_1_input, self.edge_2_input, self.edge_3_input, self.edge_4_input, self.edge_5_input, self.edge_6_input, self.edge_7_input, self.edge_8_input]
         self.edgeCodeLoad()
         
         DaesungFunctions.clickable(self, self.edge_1_input, self.edge_1_input)
@@ -2632,6 +2632,7 @@ class EdgeCodeWindow(QDialog):
         DaesungFunctions.clickable(self, self.edge_5_input, self.edge_5_input)
         DaesungFunctions.clickable(self, self.edge_6_input, self.edge_6_input)
         DaesungFunctions.clickable(self, self.edge_7_input, self.edge_7_input)
+        DaesungFunctions.clickable(self, self.edge_8_input, self.edge_8_input)
         
         self.one.clicked.connect(lambda state, button = self.one : DaesungFunctions.NumClicked(self, state, button))
         self.two.clicked.connect(lambda state, button = self.two : DaesungFunctions.NumClicked(self, state, button))
@@ -2653,7 +2654,7 @@ class EdgeCodeWindow(QDialog):
         try:
             self.load_wb = load_workbook("엣지코드_리스트.xlsx", data_only = True)
             self.load_ws = self.load_wb['Sheet1']
-            get_cells = self.load_ws['C3':'C9']
+            get_cells = self.load_ws['C3':'C10']
             for count, row in enumerate(get_cells):
                 for cell in row:
                     if cell.value == None: data = ''
@@ -3468,6 +3469,7 @@ class MesEdgeManualWindow(QDialog):
         self.DB_flag = 0
         self.s_date = s_date
         self.c_date = time.strftime('%Y%m%d') #현재일자
+        self.pending_qr_code = ''
         self.plc_addr = ['440', '444', '446', '448', '450', '452', '454', '456', '458']
 
         self.tableWidget.setStyleSheet(tableStyle)
@@ -3485,6 +3487,9 @@ class MesEdgeManualWindow(QDialog):
     
     def PressedEnterKey(self):
         QR_CODE = self.QR_input.text().replace('\x02','').replace(" ", '') #공백 제거
+        if QR_CODE == '': return
+        self.pending_qr_code = QR_CODE
+        self.QR_input.clear()
         self.StartData(QR_CODE)
     
     def DBload(self):
@@ -3611,14 +3616,14 @@ class MesEdgeManualWindow(QDialog):
             #----------------------------------------------------------------------------
             result = DaesungQuery.connectDB(self, host, port, user, name)
             #----------------------------------------------------------------------------
-            if result == 'success':
-                self.PressedEnterKey()
+            if result == 'success' and self.pending_qr_code != '':
+                self.StartData(self.pending_qr_code)
 
     def edgeCodeLoad(self):
         self.edge_code = []
         load_wb = load_workbook("엣지코드_리스트.xlsx", data_only = True)
         load_ws = load_wb['Sheet1']
-        get_cells = load_ws['C3':'C9']
+        get_cells = load_ws['C3':'C10']
         for row in get_cells:
             for cell in row: self.edge_code.append(cell.value)
 
